@@ -1,0 +1,112 @@
+version: "3.7"
+
+services:
+
+  # This service runs the gRPC server that loads your user code, in both dagster-webserver
+  # and dagster-daemon. By setting DAGSTER_CURRENT_IMAGE to its own image, we tell the
+  # run launcher to use this same image when launching runs in a new container as well.
+  # Multiple containers like this can be deployed separately - each just needs to run on
+  # its own port, and have its own entry in the workspace.yaml file that's loaded by the
+  # webserver.
+  dagster_user_code:
+    build:
+      context: .
+      dockerfile: ./Dockerfile_user_code
+    container_name: dagster_user_code
+    image: dagster_user_code_image
+    restart: always
+    env_file: .env
+    environment:
+      - DAGSTER_CURRENT_IMAGE=dagster_user_code_image
+      - DAGSTER_PG_HOST=host.docker.internal
+      - DATA_PG_HOST=host.docker.internal
+    networks:
+      - docker_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # This service runs dagster-webserver, which loads your user code from the user code container.
+  # Since our instance uses the QueuedRunCoordinator, any runs submitted from the webserver will be put on
+  # a queue and later dequeued and launched by dagster-daemon.
+  dagster_webserver:
+    build:
+      context: .
+      dockerfile: ./Dockerfile_dagster
+    entrypoint:
+      - dagster-webserver
+      - -h
+      - "0.0.0.0"
+      - -p
+      - "3000"
+      - -w
+      - workspace.yaml
+    container_name: dagster_webserver
+    expose:
+      - "3000"
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      - DAGSTER_PG_HOST=host.docker.internal
+      - DATA_PG_HOST=host.docker.internal
+    volumes: # Make docker client accessible so we can terminate containers from the webserver
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/io_manager_storage:/tmp/io_manager_storage
+    networks:
+      - docker_network
+    depends_on:
+      - dagster_user_code
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # This service runs the dagster-daemon process, which is responsible for taking runs
+  # off of the queue and launching them, as well as creating runs from schedules or sensors.
+  dagster_daemon:
+    build:
+      context: .
+      dockerfile: ./Dockerfile_dagster
+    entrypoint:
+      - dagster-daemon
+      - run
+    container_name: dagster_daemon
+    restart: on-failure
+    env_file: .env
+    environment:
+      - DAGSTER_PG_HOST=host.docker.internal
+      - DATA_PG_HOST=host.docker.internal
+    volumes: # Make docker client accessible so we can launch containers using host docker
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/io_manager_storage:/tmp/io_manager_storage
+    networks:
+      - docker_network
+    depends_on:
+      - dagster_user_code
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+
+    # PostgREST service that exposes an API over the database
+  postgrest:
+    image: postgrest/postgrest
+    ports:
+      - "3001:3001"
+    env_file: .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  swagger:
+    image: swaggerapi/swagger-ui
+    ports:
+      - "8080:8080"
+    expose:
+      - "8080"
+    environment:
+      - API_URL=http://localhost:3001/
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+
+networks:
+  docker_network:
+    driver: bridge
+    name: docker_network
