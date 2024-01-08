@@ -247,6 +247,8 @@ def crossborder_flows(context: AssetExecutionContext):
 def hydro_reservoir_storage(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
     context.log.info(f"Handling partition from {start} to {end}")
+    # entsoe-py's function is mislabeled as returning a dataframe, it actually returns a series so the warning in
+    # sanitize_series() should be ignored
     series = entsoe_client().query_aggregate_water_reservoirs_and_hydro_storage(country_code,
                                                                                 start=start,
                                                                                 end=end)
