@@ -1,7 +1,4 @@
 
--- DB for dagster's records
--- CREATE DATABASE dagster_storage;
-
 -- DB for our data (timescaleDB)
 -- CREATE DATABASE tsdb;
 
@@ -222,3 +219,13 @@ CREATE TABLE desfa_nominations_daily (
     point_id TEXT,
     point_type TEXT
 );
+
+-- for postgrest, taken from https://postgrest.org/en/stable/tutorials/tut0.html#step-4-create-database-for-api
+CREATE ROLE web_anon NOLOGIN;
+GRANT USAGE ON SCHEMA data TO web_anon;
+GRANT SELECT ON ALL TABLES IN SCHEMA data TO web_anon;
+CREATE ROLE authenticator NOINHERIT LOGIN PASSWORD 'postgres';
+GRANT web_anon TO authenticator;
+
+-- DB for dagster's records
+CREATE DATABASE dagster_storage;
