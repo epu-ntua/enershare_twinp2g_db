@@ -2,12 +2,14 @@ from functools import reduce
 
 import pandas as pd
 import pytz
+from entsog import EntsogRawClient, EntsogPandasClient
 from entsoe import EntsoeRawClient, EntsoePandasClient
 from entsoe.exceptions import NoMatchingDataError
 from pandas import Timestamp
 from pandas.core.indexes.datetimes import DatetimeIndex
-from .utils import entsoe_fixes
-from .utils.entsoe_fixes import sanitize_df, sanitize_series, transform_columns_to_ids
+from .utils import entsoe_utils, entsog_utils
+from .utils.entsoe_utils import transform_columns_to_ids
+from .utils.common import sanitize_series, sanitize_df
 
 from dagster import (
     AssetKey,
@@ -86,7 +88,7 @@ def total_load_week_ahead(context: AssetExecutionContext):
     context.log.info(f"Handling partition from {start} to {end}")
     # entsoe-py has outdated pandas and does not work
     raw_client = EntsoeRawClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
-    dataframe: pd.DataFrame = entsoe_fixes.query_load_forecast(raw_client=raw_client,
+    dataframe: pd.DataFrame = entsoe_utils.query_load_forecast(raw_client=raw_client,
                                                                country_code=country_code,
                                                                start=start,
                                                                end=end,
@@ -104,7 +106,7 @@ def total_load_month_ahead(context: AssetExecutionContext):
     context.log.info(f"Handling partition from {start} to {end}")
     # entsoe-py has outdated pandas and does not work
     raw_client = EntsoeRawClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
-    dataframe: pd.DataFrame = entsoe_fixes.query_load_forecast(raw_client=raw_client,
+    dataframe: pd.DataFrame = entsoe_utils.query_load_forecast(raw_client=raw_client,
                                                                country_code=country_code,
                                                                start=start,
                                                                end=end,
@@ -122,7 +124,7 @@ def total_load_year_ahead(context: AssetExecutionContext):
     context.log.info(f"Handling partition from {start} to {end}")
     # entsoe-py has outdated pandas and does not work
     raw_client = EntsoeRawClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
-    dataframe: pd.DataFrame = entsoe_fixes.query_load_forecast(raw_client=raw_client,
+    dataframe: pd.DataFrame = entsoe_utils.query_load_forecast(raw_client=raw_client,
                                                                country_code=country_code,
                                                                start=start,
                                                                end=end,
@@ -155,7 +157,8 @@ def generation_forecast_windsolar(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
     context.log.info(f"Handling partition from {start} to {end}")
     df_dayahead: pd.DataFrame = entsoe_client().query_wind_and_solar_forecast(country_code, start=start, end=end)
-    df_intraday: pd.DataFrame = entsoe_client().query_intraday_wind_and_solar_forecast(country_code, start=start, end=end)
+    df_intraday: pd.DataFrame = entsoe_client().query_intraday_wind_and_solar_forecast(country_code, start=start,
+                                                                                       end=end)
     sanitize_df(df_dayahead)
     sanitize_df(df_intraday)
     df_dayahead.columns = ['solar_dayahead', 'wind_dayahead']
@@ -208,7 +211,6 @@ def crossborder_flows(context: AssetExecutionContext):
             result = pd.Series()
         return result
 
-
     # first we query all the italian routes and aggregate
     gr_it_1: pd.Series = safe_call(country_code, italy_brindisi, start, end)
     gr_it_2: pd.Series = safe_call(country_code, italy_south, start, end)
@@ -240,7 +242,7 @@ def crossborder_flows(context: AssetExecutionContext):
 
 
 @asset(
-    partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
+    partitions_def=MonthlyPartitionsDefinition(start_date="2017-09-01"),
     io_manager_key="postgres_io_manager",
     group_name="entsoe"
 )
@@ -267,7 +269,8 @@ def hydro_reservoir_storage(context: AssetExecutionContext):
 def actual_generation_per_generation_unit(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
     context.log.info(f"Handling partition from {start} to {end}")
-    dataframe: pd.DataFrame = entsoe_client().query_generation_per_plant(country_code, start=start, end=end, include_eic=True)
+    dataframe: pd.DataFrame = entsoe_client().query_generation_per_plant(country_code, start=start, end=end,
+                                                                         include_eic=True)
 
     sanitize_df(dataframe)
     # keep only the first level of the columns, in lowercase, whitespace replaced with underscore
@@ -417,10 +420,19 @@ def ipto_daily_energy_balance(context: AssetExecutionContext):
 def entsog_flows_daily(context: AssetExecutionContext):
     context.log.info(context.partition_time_window)
 
-    entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
-    country_code = 'GR'
     start = Timestamp(context.partition_time_window.start)
     end = Timestamp(context.partition_time_window.end)
+    keys = entsog_utils.greek_operator_point_directions()
+
+    data = EntsogPandasClient().query_operational_point_data(start=start,
+                                                             end=end,
+                                                             indicators=['physical_flow'],
+                                                             point_directions=keys,
+                                                             verbose=False)
+
+    entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
+    country_code = 'GR'
+
     dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
     dataframe.index.rename(name='timestamp', inplace=True)
     dataframe.columns = ['actual_load']

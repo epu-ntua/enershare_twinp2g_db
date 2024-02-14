@@ -11,7 +11,8 @@ RUN pip install \
     pangres \
     requests \
     matplotlib \
-    entsoe-py
+    entsoe-py \
+    entsog-py
 
 # Add repository code
 

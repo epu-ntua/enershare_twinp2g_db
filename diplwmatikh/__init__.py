@@ -1,9 +1,6 @@
-from dagster import Definitions, load_assets_from_modules, EnvVar, ScheduleDefinition, AssetSelection, define_asset_job, \
-    repository
+from dagster import Definitions, load_assets_from_modules, EnvVar, ScheduleDefinition, AssetSelection, define_asset_job
 
 from . import assets
-from . import assets
-from .resources.postgres_io_manager import PostgresIOManager
 from .resources.postgres_io_manager import PostgresIOManager
 
 PG_IOMANAGER_CONFIG = {
@@ -17,7 +14,11 @@ PG_IOMANAGER_CONFIG = {
 
 all_assets = load_assets_from_modules([assets])
 
-entsoe_job = define_asset_job("entsoe_job", selection=AssetSelection.groups("entsoe"))
+entsoe_job = define_asset_job("entsoe_job",
+                              selection=AssetSelection.groups("entsoe") - AssetSelection.keys("hydro_reservoir_storage")
+                              )
+entsoe_hydro_job = define_asset_job("entsoe_hydro_reservoir", selection=AssetSelection.keys("hydro_reservoir_storage"))
+
 entsog_job = define_asset_job("entsog_job", selection=AssetSelection.groups("entsog"))
 desfa_job = define_asset_job("desfa_job", selection=AssetSelection.groups("desfa"))
 ipto_job = define_asset_job("ipto_job", selection=AssetSelection.groups("ipto"))
@@ -25,6 +26,11 @@ ipto_job = define_asset_job("ipto_job", selection=AssetSelection.groups("ipto"))
 
 entsoe_schedule = ScheduleDefinition(
     job=entsoe_job,
+    cron_schedule="0 0 * * *",  # daily at midnight
+)
+
+entsoe_hydro_schedule = ScheduleDefinition(
+    job=entsoe_hydro_job,
     cron_schedule="0 0 * * *",  # daily at midnight
 )
 
@@ -48,5 +54,5 @@ defs = Definitions(
     resources={
         "postgres_io_manager": PostgresIOManager(**PG_IOMANAGER_CONFIG)
     },
-    schedules=[entsog_schedule, entsoe_schedule, desfa_schedule, ipto_schedule]
+    schedules=[entsog_schedule, entsoe_hydro_schedule, entsoe_schedule, desfa_schedule, ipto_schedule]
 )
