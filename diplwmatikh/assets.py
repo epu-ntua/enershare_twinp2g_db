@@ -448,19 +448,33 @@ def entsog_flows_daily(context: AssetExecutionContext):
     end = Timestamp(context.partition_time_window.end)
     keys = entsog_utils.greek_operator_point_directions()
 
-    data = EntsogPandasClient().query_operational_point_data(start=start,
-                                                             end=end,
-                                                             indicators=['physical_flow'],
-                                                             point_directions=keys,
-                                                             verbose=False)
+    # Breaking the date range down to avoid timeouts (one request per two days, as daily returns no data)
+    days_list = pd.date_range(start, end, freq='2D')
 
-    entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
-    country_code = 'GR'
+    bidaily_data = []
+    for day in days_list:
+        data = EntsogPandasClient().query_operational_point_data(start=day,
+                                                                 end=day + pd.Timedelta(days=1),
+                                                                 indicators=['physical_flow'],
+                                                                 point_directions=keys,
+                                                                 verbose=False)
+        # Rename columns to more applicable names
+        data.rename(columns={"direction_key": "point_type", "period_from": "timestamp", "point_label": "point_id"},
+                    inplace=True)
+        # Set timestamp index and sanitize (to UTC/tz-naive)
+        data.set_index(pd.DatetimeIndex(data['timestamp']), inplace=True)
+        sanitize_df(data)
+        # Add remaining index columns to form primary key)
+        data.set_index(['point_id', 'point_type'], inplace=True, append=True)
+        # Keep only non-index column
+        data = data[['value']]
+        # Remove rows where 'value' contains an empty string
+        data = data[data['value'] != '']
+        bidaily_data.append(data)
 
-    dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
-    dataframe.index.rename(name='timestamp', inplace=True)
-    dataframe.columns = ['actual_load']
-    return Output(value=dataframe)
+    complete_data = pd.concat(bidaily_data)
+
+    return Output(value=complete_data)
 
 
 @asset(
