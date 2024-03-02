@@ -156,14 +156,38 @@ def generation_forecast_day_ahead(context: AssetExecutionContext):
 def generation_forecast_windsolar(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
     context.log.info(f"Handling partition from {start} to {end}")
-    df_dayahead: pd.DataFrame = entsoe_client().query_wind_and_solar_forecast(country_code, start=start, end=end)
-    df_intraday: pd.DataFrame = entsoe_client().query_intraday_wind_and_solar_forecast(country_code, start=start,
-                                                                                       end=end)
-    sanitize_df(df_dayahead)
-    sanitize_df(df_intraday)
-    df_dayahead.columns = ['solar_dayahead', 'wind_dayahead']
-    df_intraday.columns = ['solar_intraday', 'wind_intraday']
-    concat_df = pd.concat([df_dayahead, df_intraday], axis=1)
+
+    df_dayahead = None
+    df_intraday = None
+
+    try:
+        df_dayahead = entsoe_client().query_wind_and_solar_forecast(country_code, start=start, end=end)
+    except NoMatchingDataError:
+        pass
+
+    try:
+        df_intraday = entsoe_client().query_intraday_wind_and_solar_forecast(country_code, start=start,
+                                                                             end=end)
+    except NoMatchingDataError:
+        pass
+
+    if df_dayahead is not None:
+        sanitize_df(df_dayahead)
+        df_dayahead.columns = ['solar_dayahead', 'wind_dayahead']
+
+    if df_intraday is not None:
+        sanitize_df(df_intraday)
+        df_intraday.columns = ['solar_intraday', 'wind_intraday']
+
+    if df_dayahead is not None and df_intraday is not None:
+        concat_df = pd.concat([df_dayahead, df_intraday], axis=1)
+    elif df_dayahead is not None:
+        concat_df = df_dayahead
+    elif df_intraday is not None:
+        concat_df = df_intraday
+    else:
+        raise NoMatchingDataError
+
     return Output(value=concat_df)
 
 
