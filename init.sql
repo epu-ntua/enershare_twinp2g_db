@@ -145,24 +145,27 @@ CREATE TABLE entsog_flows_daily (
 );
 
 CREATE TABLE entsog_nominations_daily (
-    timestamp TIMESTAMP PRIMARY KEY,
+    timestamp TIMESTAMP,
     value NUMERIC,
     point_id TEXT,
-    point_type TEXT
+    point_type TEXT,
+    PRIMARY KEY (timestamp, point_id, point_type)
 );
 
 CREATE TABLE entsog_allocations_daily (
-    timestamp TIMESTAMP PRIMARY KEY,
+    timestamp TIMESTAMP,
     value NUMERIC,
     point_id TEXT,
-    point_type TEXT
+    point_type TEXT,
+    PRIMARY KEY (timestamp, point_id, point_type)
 );
 
 CREATE TABLE entsog_renominations_daily (
-    timestamp TIMESTAMP PRIMARY KEY,
+    timestamp TIMESTAMP,
     value NUMERIC,
     point_id TEXT,
-    point_type TEXT
+    point_type TEXT,
+    PRIMARY KEY (timestamp, point_id, point_type)
 );
 
 -- DESFA tables

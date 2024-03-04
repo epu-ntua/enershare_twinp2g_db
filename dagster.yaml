@@ -15,3 +15,12 @@ storage:
 run_coordinator:
   module: dagster.core.run_coordinator
   class: QueuedRunCoordinator
+  config:
+    max_concurrent_runs: 1
+    tag_concurrency_limits:
+      - key: "concurrency_tag"
+        value: "entsog"
+        limit: 1
+
+concurrency:
+  default_op_concurrency_limit: 1
