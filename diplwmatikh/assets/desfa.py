@@ -36,7 +36,8 @@ from dagster import (
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
     group_name="desfa",
-    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"}
+    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"},
+    description="Deliveries / Off-takes (imports for entry points/off-takes per exit points) per day since 2008"
 )
 def desfa_flows_daily(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -55,7 +56,8 @@ def desfa_flows_daily(context: AssetExecutionContext):
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
     group_name="desfa",
-    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"}
+    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"},
+    description="Deliveries / Off-takes (imports for entry points/off-takes per exit points) per hour since 2008"
 )
 def desfa_flows_hourly(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -74,7 +76,8 @@ def desfa_flows_hourly(context: AssetExecutionContext):
     partitions_def=StaticPartitionsDefinition(["desfa_ng_quality_yearly_monopartition"]),
     io_manager_key="postgres_io_manager",
     group_name="desfa",
-    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"}
+    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"},
+    description="Various NG quality indicators at entry points per year since 2008. The WDP and HCDP values are the mathematical average of the real values, while the values of the other quality data are the weighted average (to flow)."
 )
 def desfa_ng_quality_yearly(context: AssetExecutionContext):
     context.log.info(f"Handling single partition.")
@@ -158,7 +161,8 @@ def desfa_ng_quality_yearly(context: AssetExecutionContext):
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
     group_name="desfa",
-    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"}
+    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"},
+    description="Monthly Data of Natural Gas Pressure in Entry Points since 2008"
 )
 def desfa_ng_pressure_monthly(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -177,7 +181,8 @@ def desfa_ng_pressure_monthly(context: AssetExecutionContext):
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
     group_name="desfa",
-    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"}
+    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"},
+    description="Daily Data of Natural Gas GCV (Gross Calorific Value) in Entry/Exit Points since Nov. 2011"
 )
 def desfa_ng_gcv_daily(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -196,7 +201,8 @@ def desfa_ng_gcv_daily(context: AssetExecutionContext):
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
     group_name="desfa",
-    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"}
+    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"},
+    description="Daily nominations data of Entry/Exit Points since Nov. 2011"
 )
 def desfa_nominations_daily(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)

@@ -26,7 +26,8 @@ def entsoe_client() -> EntsoePandasClient:
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
     group_name="entsoe",
-    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"},
+    description="The day-ahead prices for each market time unit (60m). Day-ahead prices refer to the price per MWh as it is settled each hour in the energy market. In Greece, that is HEnEx. ENTSOE's data probably comes from there, as IPTO does not list them."
 )
 def day_ahead_prices(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -40,7 +41,8 @@ def day_ahead_prices(context: AssetExecutionContext):
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
     group_name="entsoe",
-    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"},
+    description="Average of real-time load values per market time unit (60m). Actual total load (including losses without stored energy) = net generation – exports + imports – absorbed energy"
 )
 def total_load_actual(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -55,7 +57,8 @@ def total_load_actual(context: AssetExecutionContext):
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
     group_name="entsoe",
-    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"},
+    description="Day-ahead forecast of average total load per market time unit (60m)"
 )
 def total_load_day_ahead(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -70,7 +73,8 @@ def total_load_day_ahead(context: AssetExecutionContext):
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
     group_name="entsoe",
-    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"},
+    description="Week ahead forecast of maximum and minimum load values per day"
 )
 def total_load_week_ahead(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -89,7 +93,8 @@ def total_load_week_ahead(context: AssetExecutionContext):
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
     group_name="entsoe",
-    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"},
+    description="Month ahead forecast of maximum and minimum load values per week"
 )
 def total_load_month_ahead(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -108,7 +113,8 @@ def total_load_month_ahead(context: AssetExecutionContext):
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
     group_name="entsoe",
-    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"},
+    description="Year ahead forecast of maximum and minimum load values per week"
 )
 def total_load_year_ahead(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -127,7 +133,8 @@ def total_load_year_ahead(context: AssetExecutionContext):
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
     group_name="entsoe",
-    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"},
+    description="An estimate of the total scheduled Net generation (MW), per each market time unit (60m) of the following day"
 )
 def generation_forecast_day_ahead(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -144,7 +151,8 @@ def generation_forecast_day_ahead(context: AssetExecutionContext):
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
     group_name="entsoe",
-    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"},
+    description="Averages of forecasts of wind and solar power net generation (MW), per each market time unit (60m) of the following (day-ahead) or same (intraday) day"
 )
 def generation_forecast_windsolar(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -188,7 +196,8 @@ def generation_forecast_windsolar(context: AssetExecutionContext):
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
     group_name="entsoe",
-    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"},
+    description="The actual aggregated net generation output, computed as the average of all available instantaneous net generation output values on each market time unit (60m)"
 )
 def actual_generation_per_type(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -204,7 +213,8 @@ def actual_generation_per_type(context: AssetExecutionContext):
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
     group_name="entsoe",
-    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"},
+    description="The measured real flow of energy between neighbouring bidding zones. Average values per market time unit (60m). One column for each directional flow (e.g. gr_al indicates energy flow from Greece to Albania)"
 )
 def crossborder_flows(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -264,7 +274,8 @@ def crossborder_flows(context: AssetExecutionContext):
     partitions_def=MonthlyPartitionsDefinition(start_date="2017-09-01"),
     io_manager_key="postgres_io_manager",
     group_name="entsoe",
-    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"},
+    description="Aggregated weekly average filling rate of all water reservoir and hydro storage plants (MWh) including the figure for the same week of the previous year"
 )
 def hydro_reservoir_storage(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -285,7 +296,8 @@ def hydro_reservoir_storage(context: AssetExecutionContext):
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
     group_name="entsoe",
-    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"},
+    description="The actual net generation output per generation unit >= 100MW, as averaged per market time unit (60m)"
 )
 def actual_generation_per_generation_unit(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
