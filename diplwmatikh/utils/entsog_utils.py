@@ -26,7 +26,7 @@ def entsog_api_call_with_retries(start: pd.Timestamp,
                                  indicators: List[str],
                                  keys: List[str],
                                  context: AssetExecutionContext,
-                                 max_retries: int = 5,
+                                 max_retries: int = 10,
                                  delay_seconds: int = 1) -> pd.DataFrame:
     last_exception = None
     for attempt in range(max_retries):

@@ -13,7 +13,8 @@ setup(
         "pangres",
         "matplotlib",
         "entsoe-py",
-        "entsog-py"
+        "entsog-py",
+        "xlrd"
     ],
     extras_require={"dev": ["dagster-webserver", "pytest"]},
 )

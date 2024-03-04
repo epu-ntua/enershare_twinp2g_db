@@ -15,12 +15,16 @@ PG_IOMANAGER_CONFIG = {
 all_assets = load_assets_from_modules([assets])
 
 entsoe_job = define_asset_job("entsoe_job",
-                              selection=AssetSelection.groups("entsoe") - AssetSelection.keys("hydro_reservoir_storage")
-                              )
+                              selection=AssetSelection.groups("entsoe")-AssetSelection.keys("hydro_reservoir_storage"))
 entsoe_hydro_job = define_asset_job("entsoe_hydro_reservoir", selection=AssetSelection.keys("hydro_reservoir_storage"))
 
 entsog_job = define_asset_job("entsog_job", selection=AssetSelection.groups("entsog"))
-desfa_job = define_asset_job("desfa_job", selection=AssetSelection.groups("desfa"))
+
+desfa_job = define_asset_job("desfa_job",
+                             selection=AssetSelection.groups("desfa") - AssetSelection.keys("desfa_ng_quality_yearly"))
+desfa_ng_quality_yearly_job = define_asset_job("desfa_ng_quality_yearly_job",
+                                               selection=AssetSelection.keys("desfa_ng_quality_yearly"))
+
 ipto_job = define_asset_job("ipto_job", selection=AssetSelection.groups("ipto"))
 
 
@@ -44,6 +48,11 @@ desfa_schedule = ScheduleDefinition(
     cron_schedule="0 2 * * *",
 )
 
+desfa_ng_quality_yearly_schedule = ScheduleDefinition(
+    job=desfa_ng_quality_yearly_job,
+    cron_schedule="0 2 * * *",
+)
+
 ipto_schedule = ScheduleDefinition(
     job=ipto_job,
     cron_schedule="0 3 * * *",
@@ -54,5 +63,6 @@ defs = Definitions(
     resources={
         "postgres_io_manager": PostgresIOManager(**PG_IOMANAGER_CONFIG)
     },
-    schedules=[entsog_schedule, entsoe_hydro_schedule, entsoe_schedule, desfa_schedule, ipto_schedule]
+    schedules=[entsog_schedule, entsoe_hydro_schedule, entsoe_schedule, desfa_schedule,
+               desfa_ng_quality_yearly_schedule, ipto_schedule]
 )

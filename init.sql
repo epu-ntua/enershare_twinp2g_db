@@ -184,7 +184,7 @@ CREATE TABLE desfa_flows_hourly (
 );
 
 CREATE TABLE desfa_ng_quality_yearly (
-    timestamp TIMESTAMP PRIMARY KEY,
+    timestamp TIMESTAMP,
     point_id TEXT,
     c1 NUMERIC,
     c2 NUMERIC,
@@ -200,7 +200,8 @@ CREATE TABLE desfa_ng_quality_yearly (
     gross_heating_value NUMERIC,
     wobbe_index NUMERIC,
     water_dew_point NUMERIC,
-    hydrocarbon_dew_point_max NUMERIC
+    hydrocarbon_dew_point_max NUMERIC,
+    PRIMARY KEY (timestamp, point_id)
 );
 
 CREATE TABLE desfa_ng_pressure_monthly (

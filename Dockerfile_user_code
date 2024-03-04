@@ -12,7 +12,8 @@ RUN pip install \
     requests \
     matplotlib \
     entsoe-py \
-    entsog-py
+    entsog-py \
+    xlrd
 
 # Add repository code
 
