@@ -1,5 +1,7 @@
 import pandas as pd
 import pytz
+from dagster import TimeWindow
+from pandas import Timestamp
 
 
 # make timestamp UTC and tz-naive
@@ -19,3 +21,9 @@ def sanitize_df(df: pd.DataFrame):
     df.index = df.index.tz_localize(None)
     df.index.rename(name='timestamp', inplace=True)
     return
+
+
+def timewindow_to_ts(tw: TimeWindow) -> (Timestamp, Timestamp):
+    start = Timestamp(tw.start)
+    end = Timestamp(tw.end)
+    return start, end

@@ -1,4 +1,7 @@
-from dagster import Definitions, load_assets_from_modules, EnvVar, ScheduleDefinition, AssetSelection, define_asset_job
+from types import ModuleType
+
+from dagster import Definitions, load_assets_from_modules, EnvVar, ScheduleDefinition, AssetSelection, define_asset_job, \
+    load_assets_from_package_module
 
 from . import assets
 from .resources.postgres_io_manager import PostgresIOManager
@@ -12,7 +15,7 @@ PG_IOMANAGER_CONFIG = {
     "dbschema": EnvVar("DATA_PG_SCHEMA")
 }
 
-all_assets = load_assets_from_modules([assets])
+all_assets = load_assets_from_package_module(assets)
 
 entsoe_job = define_asset_job("entsoe_job",
                               selection=AssetSelection.groups("entsoe")-AssetSelection.keys("hydro_reservoir_storage"))
