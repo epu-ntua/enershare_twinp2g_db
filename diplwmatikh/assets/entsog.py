@@ -48,6 +48,8 @@ def entsog_flows_daily(context: AssetExecutionContext):
         data = data[['value']]
         # Remove rows where 'value' contains an empty string
         data = data[data['value'] != '']
+        # Remove rows where 'value' contains None
+        data = data[data['value'].notna()]
         bidaily_data.append(data)
 
     complete_data = pd.concat(bidaily_data)
@@ -90,6 +92,8 @@ def entsog_nominations_daily(context: AssetExecutionContext):
         data = data[['value']]
         # Remove rows where 'value' contains an empty string
         data = data[data['value'] != '']
+        # Remove rows where 'value' contains None
+        data = data[data['value'].notna()]
         bidaily_data.append(data)
 
     complete_data = pd.concat(bidaily_data)
@@ -132,6 +136,8 @@ def entsog_allocations_daily(context: AssetExecutionContext):
         data = data[['value']]
         # Remove rows where 'value' contains an empty string
         data = data[data['value'] != '']
+        # Remove rows where 'value' contains None
+        data = data[data['value'].notna()]
         bidaily_data.append(data)
 
     complete_data = pd.concat(bidaily_data)
@@ -175,6 +181,8 @@ def entsog_renominations_daily(context: AssetExecutionContext):
         data = data[['value']]
         # Remove rows where 'value' contains an empty string
         data = data[data['value'] != '']
+        # Remove rows where 'value' contains None
+        data = data[data['value'].notna()]
         bidaily_data.append(data)
     context.log.info("Completed fetching data for ")
 
