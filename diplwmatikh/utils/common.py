@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import pytz
 from dagster import TimeWindow
 from pandas import Timestamp
@@ -27,3 +28,10 @@ def timewindow_to_ts(tw: TimeWindow) -> (Timestamp, Timestamp):
     start = Timestamp(tw.start)
     end = Timestamp(tw.end)
     return start, end
+
+
+def replace_dash_with_nan(cell):
+    if isinstance(cell, str) and cell.strip() == "-":
+        return np.nan
+    else:
+        return cell

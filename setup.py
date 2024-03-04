@@ -14,7 +14,8 @@ setup(
         "matplotlib",
         "entsoe-py",
         "entsog-py",
-        "xlrd"
+        "xlrd",
+        "openpyxl"
     ],
     extras_require={"dev": ["dagster-webserver", "pytest"]},
 )

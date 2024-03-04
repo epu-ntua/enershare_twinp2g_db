@@ -14,7 +14,7 @@ from pandas.core.indexes.datetimes import DatetimeIndex
 
 from ..utils import entsoe_utils, entsog_utils
 from ..utils.entsoe_utils import transform_columns_to_ids
-from ..utils.common import sanitize_series, sanitize_df, timewindow_to_ts
+from ..utils.common import sanitize_series, sanitize_df, timewindow_to_ts, replace_dash_with_nan
 
 from dagster import (
     AssetKey,
@@ -28,7 +28,7 @@ from dagster import (
     AssetExecutionContext, EnvVar, TimeWindow
 )
 
-
+entry_points = ["AGIA TRIADA", "SIDIROKASTRO", "KIPI", "NEA MESIMVRIA"]
 
 # DESFA assets
 
@@ -84,9 +84,6 @@ def desfa_ng_quality_yearly(context: AssetExecutionContext):
 
     url = 'https://www.desfa.gr/userfiles/pdflist/DDRA/NG-QUALITY.xls'
 
-    # Entry points
-    search_strings = ["AGIA TRIADA", "SIDIROKASTRO", "KIPI", "NEA MESIMVRIA"]
-
     # Fetch the content of the .xls file
     response = requests.get(url)
     dataframes = {}
@@ -96,7 +93,7 @@ def desfa_ng_quality_yearly(context: AssetExecutionContext):
         file_content = BytesIO(response.content)
         full_df = pd.read_excel(file_content, sheet_name=0)
 
-        for search_string in search_strings:
+        for search_string in entry_points:
             # Find the row index for the search string
             start_row = None
             current_year = datetime.date.today().year
@@ -126,13 +123,6 @@ def desfa_ng_quality_yearly(context: AssetExecutionContext):
                 block.index = block.index.tz_localize(None)
                 # Insert point_id column at start
                 block.insert(0, 'point_id', search_string)
-
-                # Replace '-' cells with NaN
-                def replace_dash_with_nan(cell):
-                    if isinstance(cell, str) and cell.strip() == "-":
-                        return np.nan
-                    else:
-                        return cell
 
                 # Apply the function to remove dashes each cell of the DataFrame
                 block = block.map(replace_dash_with_nan)
@@ -178,23 +168,84 @@ def desfa_ng_pressure_monthly(context: AssetExecutionContext):
 
 
 @asset(
-    partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
+    partitions_def=StaticPartitionsDefinition(["desfa_ng_qcv_daily_monopartition"]),
     io_manager_key="postgres_io_manager",
     group_name="desfa",
     op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"},
     description="Daily Data of Natural Gas GCV (Gross Calorific Value) in Entry/Exit Points since Nov. 2011"
 )
 def desfa_ng_gcv_daily(context: AssetExecutionContext):
-    start, end = timewindow_to_ts(context.partition_time_window)
-    context.log.info(f"Handling partition from {start} to {end}")
+    context.log.info(f"Handling single partition.")
 
-    entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
-    country_code = 'GR'
+    url = 'https://www.desfa.gr/userfiles/pdflist/DDRA/GCV.xlsx'
 
-    dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
-    dataframe.index.rename(name='timestamp', inplace=True)
-    dataframe.columns = ['actual_load']
-    return Output(value=dataframe)
+    # Fetch the content of the .xls file
+    response = requests.get(url)
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Use BytesIO to create a file-like object from the content
+        file_content = BytesIO(response.content)
+        df = pd.read_excel(file_content, sheet_name=0)
+
+        df = df.drop(df.columns[5], axis=1)  # Remove 5th column starting from 0 (empty)
+
+        df = df.drop(df.index[0:3])  # Remove first 3 rows (not needed for data)
+        df = df.iloc[:, :-1]  # This selects all rows and all columns except the last one
+        df = df.iloc[:-4, :]  # This selects all columns and all rows except the last 4 rows
+
+        # Now we've dropped all the excess rows and columns.
+        # Time to transform the dataframe to make the first row (barring the first element) into an index
+
+        new_headers = df.iloc[0, 1:].tolist()
+        # Adding suffix "_exit" to the first 4 headers and "_entry" to the rest, since a point may be bidirectional
+        new_headers = [x + "_entry" for x in new_headers[:4]] + [x + "_exit" for x in new_headers[4:]]
+        print(new_headers)
+
+        # We will remove the suffixes later
+        def remove_suffix(point: str):
+            if point.endswith("_entry"):
+                return point[:-6]
+            else:
+                return point[:-5]
+
+        df.columns = ['timestamp'] + new_headers  # Keep 'timestamp' for the first column and update the rest
+        # Drop the first row
+        df = df.drop(df.index[0])
+        # Reset index if necessary
+        df.reset_index(drop=True, inplace=True)
+
+        df['timestamp'] = pd.to_datetime(df['timestamp'], format='%Y')
+
+        # Melt the DataFrame to go from wide to long format
+        df_long = pd.melt(df, id_vars=['timestamp'], var_name='point_id', value_name='value')
+
+        # Set the new index using the 'timestamp' and 'point_id' columns to create a MultiIndex
+        df_long.set_index(['timestamp', 'point_id'], inplace=True)
+
+        # Now, to add "entry"/"exit" labels to our points
+        def label_point_as_entry_or_exit(point: str):
+            if point.endswith("_entry"):
+                return "entry"
+            else:
+                return "exit"
+
+        # Apply this function to the 'point_id' index level
+        processed_header = df_long.index.get_level_values('point_id').map(label_point_as_entry_or_exit)
+        # Add the processed values as a new level to the index
+        df_long['point_type'] = processed_header
+        # Then set this new column as an additional level of the index
+        df_long.set_index('point_type', append=True, inplace=True)
+
+        # Applying reverse transformation to the 'point_id' index, i.e. removing suffix
+        df_long.reset_index(drop=False, inplace=True)
+        df_long['point_id'] = df_long['point_id'].apply(remove_suffix)
+
+        df_long.set_index(['timestamp', 'point_id', 'point_type'], inplace=True)
+
+        df_long = df_long.map(replace_dash_with_nan)
+        return Output(value=df_long)
+    else:
+        raise Exception(f"Failed to fetch the file, status code: {response.status_code}")
 
 
 @asset(

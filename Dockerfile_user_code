@@ -13,7 +13,8 @@ RUN pip install \
     matplotlib \
     entsoe-py \
     entsog-py \
-    xlrd
+    xlrd \
+    openpyxl
 
 # Add repository code
 

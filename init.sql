@@ -212,10 +212,11 @@ CREATE TABLE desfa_ng_pressure_monthly (
 );
 
 CREATE TABLE desfa_ng_gcv_daily (
-    timestamp TIMESTAMP PRIMARY KEY,
+    timestamp TIMESTAMP,
     value NUMERIC,
     point_id TEXT,
-    point_type TEXT
+    point_type TEXT,
+    PRIMARY KEY (timestamp, point_id, point_type)
 );
 
 CREATE TABLE desfa_nominations_daily (
