@@ -472,11 +472,8 @@ def entsog_flows_daily(context: AssetExecutionContext):
 
     bidaily_data = []
     for day in days_list:
-        data = EntsogPandasClient().query_operational_point_data(start=day,
-                                                                 end=day + pd.Timedelta(days=1),
-                                                                 indicators=['physical_flow'],
-                                                                 point_directions=keys,
-                                                                 verbose=False)
+        data = entsog_utils.entsog_api_call_with_retries(day, day + pd.Timedelta(days=1), ['physical_flow'], keys, context)
+
         context.log.info(f"Fetched data from {day.strftime('%Y-%m-%d')} to {(day + pd.Timedelta(days=1)).strftime('%Y-%m-%d')}")
         # Rename columns to more applicable names
         data.rename(columns={"direction_key": "point_type", "period_from": "timestamp", "point_label": "point_id"},
@@ -516,11 +513,8 @@ def entsog_nominations_daily(context: AssetExecutionContext):
 
     bidaily_data = []
     for day in days_list:
-        data = EntsogPandasClient().query_operational_point_data(start=day,
-                                                                 end=day + pd.Timedelta(days=1),
-                                                                 indicators=['nomination'],
-                                                                 point_directions=keys,
-                                                                 verbose=False)
+        data = entsog_utils.entsog_api_call_with_retries(day, day + pd.Timedelta(days=1), ['nomination'], keys, context)
+
         context.log.info(f"Fetched data from {day.strftime('%Y-%m-%d')} to {(day + pd.Timedelta(days=1)).strftime('%Y-%m-%d')}")
         # Rename columns to more applicable names
         data.rename(columns={"direction_key": "point_type", "period_from": "timestamp", "point_label": "point_id"},
@@ -560,11 +554,7 @@ def entsog_allocations_daily(context: AssetExecutionContext):
 
     bidaily_data = []
     for day in days_list:
-        data = EntsogPandasClient().query_operational_point_data(start=day,
-                                                                 end=day + pd.Timedelta(days=1),
-                                                                 indicators=['allocation'],
-                                                                 point_directions=keys,
-                                                                 verbose=False)
+        data = entsog_utils.entsog_api_call_with_retries(day, day + pd.Timedelta(days=1), ['allocation'], keys, context)
 
         context.log.info(f"Fetched data from {day.strftime('%Y-%m-%d')} to {(day + pd.Timedelta(days=1)).strftime('%Y-%m-%d')}")
         # Rename columns to more applicable names
@@ -605,11 +595,7 @@ def entsog_renominations_daily(context: AssetExecutionContext):
 
     bidaily_data = []
     for day in days_list:
-        data = EntsogPandasClient().query_operational_point_data(start=day,
-                                                                 end=day + pd.Timedelta(days=1),
-                                                                 indicators=['renomination'],
-                                                                 point_directions=keys,
-                                                                 verbose=False)
+        data = entsog_utils.entsog_api_call_with_retries(day, day + pd.Timedelta(days=1), ['renomination'], keys, context)
 
         context.log.info(f"Fetched data from {day.strftime('%Y-%m-%d')} to {(day + pd.Timedelta(days=1)).strftime('%Y-%m-%d')}")
         # Rename columns to more applicable names
