@@ -21,6 +21,16 @@ run_coordinator:
       - key: "concurrency_tag"
         value: "entsog"
         limit: 1
+      - key: "concurrency_tag"
+        value: "entsoe"
+        limit: 4
+      - key: "concurrency_tag"
+        value: "ipto"
+        limit: 1
+      - key: "concurrency_tag"
+        value: "desfa"
+        limit: 1
+
 
 concurrency:
   default_op_concurrency_limit: 1
