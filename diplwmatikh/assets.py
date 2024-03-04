@@ -326,12 +326,12 @@ def actual_generation_per_generation_unit(context: AssetExecutionContext):
     op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
 )
 def ipto_day_ahead_load_forecast(context: AssetExecutionContext):
-    context.log.info(context.partition_time_window)
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
 
     entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
     country_code = 'GR'
-    start = Timestamp(context.partition_time_window.start)
-    end = Timestamp(context.partition_time_window.end)
+
     dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
     dataframe.index.rename(name='timestamp', inplace=True)
     dataframe.columns = ['actual_load']
@@ -345,12 +345,12 @@ def ipto_day_ahead_load_forecast(context: AssetExecutionContext):
     op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
 )
 def ipto_day_ahead_res_forecast(context: AssetExecutionContext):
-    context.log.info(context.partition_time_window)
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
 
     entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
     country_code = 'GR'
-    start = Timestamp(context.partition_time_window.start)
-    end = Timestamp(context.partition_time_window.end)
+
     dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
     dataframe.index.rename(name='timestamp', inplace=True)
     dataframe.columns = ['actual_load']
@@ -364,12 +364,12 @@ def ipto_day_ahead_res_forecast(context: AssetExecutionContext):
     op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
 )
 def ipto_week_ahead_load_forecast(context: AssetExecutionContext):
-    context.log.info(context.partition_time_window)
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
 
     entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
     country_code = 'GR'
-    start = Timestamp(context.partition_time_window.start)
-    end = Timestamp(context.partition_time_window.end)
+
     dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
     dataframe.index.rename(name='timestamp', inplace=True)
     dataframe.columns = ['actual_load']
@@ -383,12 +383,12 @@ def ipto_week_ahead_load_forecast(context: AssetExecutionContext):
     op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
 )
 def ipto_net_interconnection_flows(context: AssetExecutionContext):
-    context.log.info(context.partition_time_window)
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
 
     entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
     country_code = 'GR'
-    start = Timestamp(context.partition_time_window.start)
-    end = Timestamp(context.partition_time_window.end)
+
     dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
     dataframe.index.rename(name='timestamp', inplace=True)
     dataframe.columns = ['actual_load']
@@ -402,12 +402,12 @@ def ipto_net_interconnection_flows(context: AssetExecutionContext):
     op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
 )
 def ipto_res_injections(context: AssetExecutionContext):
-    context.log.info(context.partition_time_window)
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
 
     entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
     country_code = 'GR'
-    start = Timestamp(context.partition_time_window.start)
-    end = Timestamp(context.partition_time_window.end)
+
     dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
     dataframe.index.rename(name='timestamp', inplace=True)
     dataframe.columns = ['actual_load']
@@ -421,12 +421,12 @@ def ipto_res_injections(context: AssetExecutionContext):
     op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
 )
 def ipto_unit_production(context: AssetExecutionContext):
-    context.log.info(context.partition_time_window)
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
 
     entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
     country_code = 'GR'
-    start = Timestamp(context.partition_time_window.start)
-    end = Timestamp(context.partition_time_window.end)
+
     dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
     dataframe.index.rename(name='timestamp', inplace=True)
     dataframe.columns = ['actual_load']
@@ -440,12 +440,12 @@ def ipto_unit_production(context: AssetExecutionContext):
     op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
 )
 def ipto_daily_energy_balance(context: AssetExecutionContext):
-    context.log.info(context.partition_time_window)
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
 
     entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
     country_code = 'GR'
-    start = Timestamp(context.partition_time_window.start)
-    end = Timestamp(context.partition_time_window.end)
+
     dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
     dataframe.index.rename(name='timestamp', inplace=True)
     dataframe.columns = ['actual_load']
@@ -462,10 +462,9 @@ def ipto_daily_energy_balance(context: AssetExecutionContext):
     description="Deliveries / Off-takes (imports for entry points/off-takes per exit points) per day since 2017"
 )
 def entsog_flows_daily(context: AssetExecutionContext):
-    context.log.info(context.partition_time_window)
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
 
-    start = Timestamp(context.partition_time_window.start)
-    end = Timestamp(context.partition_time_window.end)
     keys = entsog_utils.greek_operator_point_directions()
 
     # Breaking the date range down to avoid timeouts (one request per two days, as daily returns no data)
@@ -507,10 +506,9 @@ def entsog_flows_daily(context: AssetExecutionContext):
     description="Daily nominations for entry and exit points since 2017"
 )
 def entsog_nominations_daily(context: AssetExecutionContext):
-    context.log.info(context.partition_time_window)
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
 
-    start = Timestamp(context.partition_time_window.start)
-    end = Timestamp(context.partition_time_window.end)
     keys = entsog_utils.greek_operator_point_directions()
 
     # Breaking the date range down to avoid timeouts (one request per two days, as daily returns no data)
@@ -552,10 +550,9 @@ def entsog_nominations_daily(context: AssetExecutionContext):
     description="Daily allocations for entry and exit points since 2017"
 )
 def entsog_allocations_daily(context: AssetExecutionContext):
-    context.log.info(context.partition_time_window)
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
 
-    start = Timestamp(context.partition_time_window.start)
-    end = Timestamp(context.partition_time_window.end)
     keys = entsog_utils.greek_operator_point_directions()
 
     # Breaking the date range down to avoid timeouts (one request per two days, as daily returns no data)
@@ -598,10 +595,9 @@ def entsog_allocations_daily(context: AssetExecutionContext):
     description="Daily renominations for entry and exit points since 2017"
 )
 def entsog_renominations_daily(context: AssetExecutionContext):
-    context.log.info(context.partition_time_window)
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
 
-    start = Timestamp(context.partition_time_window.start)
-    end = Timestamp(context.partition_time_window.end)
     keys = entsog_utils.greek_operator_point_directions()
 
     # Breaking the date range down to avoid timeouts (one request per two days, as daily returns no data)
@@ -646,12 +642,12 @@ def entsog_renominations_daily(context: AssetExecutionContext):
     op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"}
 )
 def desfa_flows_daily(context: AssetExecutionContext):
-    context.log.info(context.partition_time_window)
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
 
     entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
     country_code = 'GR'
-    start = Timestamp(context.partition_time_window.start)
-    end = Timestamp(context.partition_time_window.end)
+
     dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
     dataframe.index.rename(name='timestamp', inplace=True)
     dataframe.columns = ['actual_load']
@@ -665,12 +661,12 @@ def desfa_flows_daily(context: AssetExecutionContext):
     op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"}
 )
 def desfa_flows_hourly(context: AssetExecutionContext):
-    context.log.info(context.partition_time_window)
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
 
     entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
     country_code = 'GR'
-    start = Timestamp(context.partition_time_window.start)
-    end = Timestamp(context.partition_time_window.end)
+
     dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
     dataframe.index.rename(name='timestamp', inplace=True)
     dataframe.columns = ['actual_load']
@@ -684,12 +680,12 @@ def desfa_flows_hourly(context: AssetExecutionContext):
     op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"}
 )
 def desfa_ng_quality_yearly(context: AssetExecutionContext):
-    context.log.info(context.partition_time_window)
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
 
     entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
     country_code = 'GR'
-    start = Timestamp(context.partition_time_window.start)
-    end = Timestamp(context.partition_time_window.end)
+
     dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
     dataframe.index.rename(name='timestamp', inplace=True)
     dataframe.columns = ['actual_load']
@@ -703,12 +699,12 @@ def desfa_ng_quality_yearly(context: AssetExecutionContext):
     op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"}
 )
 def desfa_ng_pressure_monthly(context: AssetExecutionContext):
-    context.log.info(context.partition_time_window)
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
 
     entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
     country_code = 'GR'
-    start = Timestamp(context.partition_time_window.start)
-    end = Timestamp(context.partition_time_window.end)
+
     dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
     dataframe.index.rename(name='timestamp', inplace=True)
     dataframe.columns = ['actual_load']
@@ -722,12 +718,12 @@ def desfa_ng_pressure_monthly(context: AssetExecutionContext):
     op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"}
 )
 def desfa_ng_gcv_daily(context: AssetExecutionContext):
-    context.log.info(context.partition_time_window)
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
 
     entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
     country_code = 'GR'
-    start = Timestamp(context.partition_time_window.start)
-    end = Timestamp(context.partition_time_window.end)
+
     dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
     dataframe.index.rename(name='timestamp', inplace=True)
     dataframe.columns = ['actual_load']
@@ -741,12 +737,12 @@ def desfa_ng_gcv_daily(context: AssetExecutionContext):
     op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"}
 )
 def desfa_nominations_daily(context: AssetExecutionContext):
-    context.log.info(context.partition_time_window)
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
 
     entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
     country_code = 'GR'
-    start = Timestamp(context.partition_time_window.start)
-    end = Timestamp(context.partition_time_window.end)
+
     dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
     dataframe.index.rename(name='timestamp', inplace=True)
     dataframe.columns = ['actual_load']
