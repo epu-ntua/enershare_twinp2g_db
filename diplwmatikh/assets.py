@@ -40,7 +40,8 @@ def timewindow_to_ts(tw: TimeWindow) -> (Timestamp, Timestamp):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="entsoe"
+    group_name="entsoe",
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
 )
 def day_ahead_prices(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -53,7 +54,8 @@ def day_ahead_prices(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="entsoe"
+    group_name="entsoe",
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
 )
 def total_load_actual(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -67,7 +69,8 @@ def total_load_actual(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="entsoe"
+    group_name="entsoe",
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
 )
 def total_load_day_ahead(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -81,7 +84,8 @@ def total_load_day_ahead(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="entsoe"
+    group_name="entsoe",
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
 )
 def total_load_week_ahead(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -99,7 +103,8 @@ def total_load_week_ahead(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="entsoe"
+    group_name="entsoe",
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
 )
 def total_load_month_ahead(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -117,7 +122,8 @@ def total_load_month_ahead(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="entsoe"
+    group_name="entsoe",
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
 )
 def total_load_year_ahead(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -135,7 +141,8 @@ def total_load_year_ahead(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="entsoe"
+    group_name="entsoe",
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
 )
 def generation_forecast_day_ahead(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -151,7 +158,8 @@ def generation_forecast_day_ahead(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="entsoe"
+    group_name="entsoe",
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
 )
 def generation_forecast_windsolar(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -194,7 +202,8 @@ def generation_forecast_windsolar(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="entsoe"
+    group_name="entsoe",
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
 )
 def actual_generation_per_type(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -209,7 +218,8 @@ def actual_generation_per_type(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="entsoe"
+    group_name="entsoe",
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
 )
 def crossborder_flows(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -268,7 +278,8 @@ def crossborder_flows(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2017-09-01"),
     io_manager_key="postgres_io_manager",
-    group_name="entsoe"
+    group_name="entsoe",
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
 )
 def hydro_reservoir_storage(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -288,7 +299,8 @@ def hydro_reservoir_storage(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="entsoe"
+    group_name="entsoe",
+    op_tags={"dagster/concurrency_key": "entsoe", "concurrency_tag": "entsoe"}
 )
 def actual_generation_per_generation_unit(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
@@ -310,7 +322,8 @@ def actual_generation_per_generation_unit(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="ipto"
+    group_name="ipto",
+    op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
 )
 def ipto_day_ahead_load_forecast(context: AssetExecutionContext):
     context.log.info(context.partition_time_window)
@@ -328,7 +341,8 @@ def ipto_day_ahead_load_forecast(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="ipto"
+    group_name="ipto",
+    op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
 )
 def ipto_day_ahead_res_forecast(context: AssetExecutionContext):
     context.log.info(context.partition_time_window)
@@ -346,7 +360,8 @@ def ipto_day_ahead_res_forecast(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="ipto"
+    group_name="ipto",
+    op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
 )
 def ipto_week_ahead_load_forecast(context: AssetExecutionContext):
     context.log.info(context.partition_time_window)
@@ -364,7 +379,8 @@ def ipto_week_ahead_load_forecast(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="ipto"
+    group_name="ipto",
+    op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
 )
 def ipto_net_interconnection_flows(context: AssetExecutionContext):
     context.log.info(context.partition_time_window)
@@ -382,7 +398,8 @@ def ipto_net_interconnection_flows(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="ipto"
+    group_name="ipto",
+    op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
 )
 def ipto_res_injections(context: AssetExecutionContext):
     context.log.info(context.partition_time_window)
@@ -400,7 +417,8 @@ def ipto_res_injections(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="ipto"
+    group_name="ipto",
+    op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
 )
 def ipto_unit_production(context: AssetExecutionContext):
     context.log.info(context.partition_time_window)
@@ -418,7 +436,8 @@ def ipto_unit_production(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="ipto"
+    group_name="ipto",
+    op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
 )
 def ipto_daily_energy_balance(context: AssetExecutionContext):
     context.log.info(context.partition_time_window)
@@ -623,7 +642,8 @@ def entsog_renominations_daily(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="desfa"
+    group_name="desfa",
+    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"}
 )
 def desfa_flows_daily(context: AssetExecutionContext):
     context.log.info(context.partition_time_window)
@@ -641,7 +661,8 @@ def desfa_flows_daily(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="desfa"
+    group_name="desfa",
+    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"}
 )
 def desfa_flows_hourly(context: AssetExecutionContext):
     context.log.info(context.partition_time_window)
@@ -659,7 +680,8 @@ def desfa_flows_hourly(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="desfa"
+    group_name="desfa",
+    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"}
 )
 def desfa_ng_quality_yearly(context: AssetExecutionContext):
     context.log.info(context.partition_time_window)
@@ -677,7 +699,8 @@ def desfa_ng_quality_yearly(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="desfa"
+    group_name="desfa",
+    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"}
 )
 def desfa_ng_pressure_monthly(context: AssetExecutionContext):
     context.log.info(context.partition_time_window)
@@ -695,7 +718,8 @@ def desfa_ng_pressure_monthly(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="desfa"
+    group_name="desfa",
+    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"}
 )
 def desfa_ng_gcv_daily(context: AssetExecutionContext):
     context.log.info(context.partition_time_window)
@@ -713,7 +737,8 @@ def desfa_ng_gcv_daily(context: AssetExecutionContext):
 @asset(
     partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
     io_manager_key="postgres_io_manager",
-    group_name="desfa"
+    group_name="desfa",
+    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"}
 )
 def desfa_nominations_daily(context: AssetExecutionContext):
     context.log.info(context.partition_time_window)
