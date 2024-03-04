@@ -40,7 +40,7 @@ def entsog_api_call_with_retries(start: pd.Timestamp,
                 context.log.info(f"Attempt no {attempt + 1} successful.")
             return data
         except Exception as e:
-            context.log.info(f"Attempt no. {attempt + 1} failed with error: {e}")
+            context.log.info(f"Attempt no. {attempt + 1} failed with error: {type(e).__name__}: {e}")
             last_exception = e
             time.sleep(delay_seconds)
 
