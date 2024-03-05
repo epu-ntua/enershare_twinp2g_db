@@ -28,13 +28,16 @@ desfa_job = define_asset_job("desfa_job",
                              selection=AssetSelection.groups("desfa")
                                        - AssetSelection.keys("desfa_ng_quality_yearly")
                                        - AssetSelection.keys("desfa_ng_gcv_daily")
-                                       - AssetSelection.keys("desfa_flows_daily"))
+                                       - AssetSelection.keys("desfa_flows_daily")
+                                       - AssetSelection.keys("desfa_ng_pressure_monthly"))
 desfa_ng_quality_yearly_job = define_asset_job("desfa_ng_quality_yearly_job",
                                                selection=AssetSelection.keys("desfa_ng_quality_yearly"))
 desfa_ng_gcv_daily_job = define_asset_job("desfa_ng_gcv_daily_job",
                                           selection=AssetSelection.keys("desfa_ng_gcv_daily"))
 desfa_flows_daily_job = define_asset_job("desfa_flows_daily_job",
                                           selection=AssetSelection.keys("desfa_flows_daily"))
+desfa_ng_pressure_monthly_job = define_asset_job("desfa_ng_pressure_monthly_job",
+                                                 selection=AssetSelection.keys("desfa_ng_pressure_monthly"))
 
 ipto_job = define_asset_job("ipto_job", selection=AssetSelection.groups("ipto"))
 
@@ -73,6 +76,12 @@ desfa_flows_daily_schedule = ScheduleDefinition(
     cron_schedule="0 2 * * *",
 )
 
+desfa_ng_pressure_monthly_schedule = ScheduleDefinition(
+    job=desfa_ng_pressure_monthly_job,
+    cron_schedule="0 2 * * *",
+)
+
+
 ipto_schedule = ScheduleDefinition(
     job=ipto_job,
     cron_schedule="0 3 * * *",
@@ -84,5 +93,6 @@ defs = Definitions(
         "postgres_io_manager": PostgresIOManager(**PG_IOMANAGER_CONFIG)
     },
     schedules=[entsog_schedule, entsoe_hydro_schedule, entsoe_schedule, desfa_schedule,
-               desfa_ng_quality_yearly_schedule, desfa_ng_gcv_daily_schedule, desfa_flows_daily_schedule, ipto_schedule]
+               desfa_ng_quality_yearly_schedule, desfa_ng_gcv_daily_schedule, desfa_flows_daily_schedule,
+               desfa_ng_pressure_monthly_schedule, ipto_schedule]
 )

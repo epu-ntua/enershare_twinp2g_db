@@ -206,10 +206,11 @@ CREATE TABLE desfa_ng_quality_yearly (
 );
 
 CREATE TABLE desfa_ng_pressure_monthly (
-    timestamp TIMESTAMP PRIMARY KEY,
+    timestamp TIMESTAMP,
     point_id TEXT,
     min_delivery_pressure NUMERIC,
-    max_delivery_pressure NUMERIC
+    max_delivery_pressure NUMERIC,
+    PRIMARY KEY (timestamp, point_id)
 );
 
 CREATE TABLE desfa_ng_gcv_daily (

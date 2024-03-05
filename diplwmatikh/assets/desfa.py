@@ -201,23 +201,97 @@ def desfa_ng_quality_yearly(context: AssetExecutionContext):
 
 
 @asset(
-    partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
+    partitions_def=StaticPartitionsDefinition(["desfa_ng_pressure_monthly_monopartition"]),
     io_manager_key="postgres_io_manager",
     group_name="desfa",
     op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"},
     description="Monthly Data of Natural Gas Pressure in Entry Points since 2008"
 )
 def desfa_ng_pressure_monthly(context: AssetExecutionContext):
-    start, end = timewindow_to_ts(context.partition_time_window)
-    context.log.info(f"Handling partition from {start} to {end}")
+    context.log.info(f"Handling single partition.")
 
-    entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
-    country_code = 'GR'
+    url = 'https://www.desfa.gr/userfiles/pdflist/DDRA/NG-Pressure.xls'
 
-    dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
-    dataframe.index.rename(name='timestamp', inplace=True)
-    dataframe.columns = ['actual_load']
-    return Output(value=dataframe)
+    # Fetch the content of the .xls file
+    response = requests.get(url)
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Use BytesIO to create a file-like object from the content
+        file_content = BytesIO(response.content)
+        df = pd.read_excel(file_content, sheet_name=0)
+
+        # Assuming 'df' is your DataFrame and the first column contains your mixed data
+        # Function to convert only valid datetimes to the first of the month
+        def convert_to_first_of_month(val):
+            try:
+                # Attempt to parse the datetime with the specific format
+                date_val = pd.to_datetime(val, format='%m/%d/%Y')
+                # If successful, return the date set to the first of the month
+                return date_val.replace(day=1)
+            except ValueError:
+                # If parsing fails, return the original value
+                return val
+
+        # Apply the function to the first column
+        df.iloc[:, 0] = df.iloc[:, 0].apply(convert_to_first_of_month)
+
+        # Initialize a list to store tuples of (row index, matching substring)
+        found_substrings = []
+
+        # Iterate over each row in the DataFrame
+        for index, row in df.iterrows():
+            # Convert the value in the first column to string
+            cell_value = str(row.iloc[0])
+            # Check each entry_point
+            for sub in entry_points:
+                if sub in cell_value:
+                    # If the entry point's substring is found, append (index, entry_point) to the list
+                    found_substrings.append((index, sub))
+                    # Break the loop if only the first match is needed
+                    break
+
+        subblocks = []  # tuples of (entry_point, start_row, end_row)
+        for row_index, substring in found_substrings:
+            # print(f"Row {row_index} contains the substring '{substring}'")
+            start_row = row_index + 3
+
+            # Apply the function to the 0th column to get a Series indicating whether each cell is a valid date
+            def is_valid_datetime(cell):
+                if isinstance(cell, pd.Timestamp):
+                    return pd.notna(cell)
+                else:
+                    return False
+            def find_non_datetime_index(df, n):
+                for index, row in df.iloc[n:].iterrows():
+                    # Check if the value in the first column is not an instance of datetime
+                    if not is_valid_datetime(row.iloc[0]):
+                        return index - 1  # Return the index where a non-datetime value is found
+                return len(df) - 1  # Return None if all values are datetimes
+
+            idx = find_non_datetime_index(df, start_row)
+            # print(f"Last row meeting condition for {substring} is {idx}")
+            subblocks.append((substring, start_row, idx))
+
+        df.columns = ['timestamp', 'min_delivery_pressure', 'max_delivery_pressure']
+
+        # Initialize an empty list to store each modified subblock dataframe
+        subblock_dfs = []
+
+        # Iterate through each subblock definition
+        for label, start, end in subblocks:
+            # Slice the dataframe to get the current subblock
+            subblock_df = df.iloc[start:end + 1].copy()  # end+1 because iloc slicing is exclusive at the end
+            # Add the label column with the current subblock's label
+            subblock_df['point_id'] = label
+            # Append the modified subblock dataframe to our list
+            subblock_dfs.append(subblock_df)
+
+        # Concatenate all subblock dataframes into a new dataframe
+        merged_df = pd.concat(subblock_dfs, ignore_index=True)
+        merged_df.set_index(['timestamp', 'point_id'], inplace=True)
+        return Output(value=merged_df)
+    else:
+        raise Exception(f"Failed to fetch the file, status code: {response.status_code}")
 
 
 @asset(
