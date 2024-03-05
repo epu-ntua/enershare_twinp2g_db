@@ -9,9 +9,9 @@ def parameters(start: pd.Timestamp, end: pd.Timestamp, file_category: str) -> Li
             ("dateEnd", end.strftime('%Y-%m-%d')),
             ("FileCategory", file_category)]
 
-def deduplicate_json(json_file, file_category: str):
+def deduplicate_json(json_file, file_category: str, filetype: str = "xlsx"):
     # Step 1: Define a regex pattern to match URLs of the format "*{file_category}_0x.xlsx"
-    pattern = re.compile(rf'^(.*){re.escape(file_category)}_0(\d+)\.xlsx$')
+    pattern = re.compile(rf'^(.*){re.escape(file_category)}_0(\d+)\.{re.escape(filetype)}$')
 
     # Step 2: Iterate through the URLs and extract matching entries and their components (prefix and x)
     entries = {}

@@ -1,3 +1,4 @@
+import json
 from functools import reduce
 from io import BytesIO
 
@@ -487,22 +488,80 @@ def ipto_week_ahead_load_forecast(context: AssetExecutionContext):
 
 
 @asset(
-    partitions_def=MonthlyPartitionsDefinition(start_date="2020-10-01"),
+    partitions_def=MonthlyPartitionsDefinition(start_date="2020-05-01"),
     io_manager_key="postgres_io_manager",
     group_name="ipto",
-    op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
+    op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"},
+    description="Provided by IPTO once a day (SCADA). One column per adjacent country with net flow of energy per hour."
 )
 def ipto_net_interconnection_flows(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
     context.log.info(f"Handling partition from {start} to {end}")
 
-    entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
-    country_code = 'GR'
+    file_category = "RealTimeSCADAImportsExports"
+    params = parameters(start, end, file_category)
 
-    dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
-    dataframe.index.rename(name='timestamp', inplace=True)
-    dataframe.columns = ['actual_load']
-    return Output(value=dataframe)
+    response = requests.get(top_level_url, params=params)
+
+    if response.status_code == 200:
+        data_with_duplicates = response.json()
+
+        data = deduplicate_json(data_with_duplicates, file_category, 'xls')
+
+        dataframes = []
+        for file in data:
+            xls_url = file['file_path']
+
+            # Fetch the content of the .xls file
+            inner_response = requests.get(xls_url)
+            # Check if the request was successful
+            if response.status_code == 200:
+                # Use BytesIO to create a file-like object from the content
+                file_content = BytesIO(inner_response.content)
+                df = pd.read_excel(file_content, sheet_name=0)
+
+                # flaggg = False
+                timestamp_str = xls_url.split('/')[-1].split('_')[0]
+                timestamp_start = pd.Timestamp(timestamp_str)
+                context.log.info(f"Got timestamp {timestamp_start} from URL: {xls_url}")
+
+                # Asserting the format is as expected
+
+                assert df.columns[1] == 'ALBANIA REALTIME NET (MWh)', \
+                    f"Unrecognized format: first column is {df.columns[1]}, not expected"
+                assert df.iloc[2, 1] == 'FYROM REALTIME NET (MWh)', \
+                    f"Unrecognized format: dataframe[2,1] is {df.iloc[2, 1]}, not expected"
+                assert df.iloc[5, 1] == 'BULGARIA REALTIME NET (MWh)', \
+                    f"Unrecognized format: dataframe[5,1] is {df.iloc[5, 1]}, not expected"
+                assert df.iloc[8, 1] == 'TURKEY REALTIME NET (MWh)', \
+                    f"Unrecognized format: dataframe[8,1] is {df.iloc[8, 1]}, not expected"
+                assert df.iloc[11, 1] == 'ITALY REALTIME NET (MWh)', \
+                    f"Unrecognized format: dataframe[11,1] is {df.iloc[11, 1]}, not expected"
+
+                # Dropping excess rows/columns
+                df.drop([0, 2, 3, 5, 6, 8, 9, 11, 12], inplace=True)
+                df.drop(df.columns[0], axis=1, inplace=True)
+                df.drop(df.columns[-1], axis=1, inplace=True)
+
+                # Transposing, adding column names and timestamp index
+                df_transposed = df.transpose()
+                timestamp_index = pd.date_range(start=timestamp_start, periods=24, freq='60T')
+                df_transposed.index = timestamp_index
+                df_transposed.index.name = 'timestamp'
+                df_transposed.columns = ['albania', 'fyrom', 'bulgaria', 'turkey', 'italy']
+
+                dataframes.append(df_transposed)
+
+            else:
+                raise Exception(f"Failed to fetch the xls file {xls_url}, status code: {inner_response.status_code}")
+        if len(dataframes) == 0:
+            context.log.warning(f"No data found for this partition! The response from the IPTO API was:\n \
+            {json.dumps(data_with_duplicates, indent=4, ensure_ascii=False)}")
+            return Output(value=None)
+        final_df = pd.concat(dataframes, ignore_index=False)
+        return Output(value=final_df)
+    else:
+        raise Exception(f"Failed to fetch the file from {top_level_url}, status code: {response.status_code}")
 
 
 @asset(

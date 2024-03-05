@@ -35,14 +35,17 @@ desfa_ng_quality_yearly_job = define_asset_job("desfa_ng_quality_yearly_job",
 desfa_ng_gcv_daily_job = define_asset_job("desfa_ng_gcv_daily_job",
                                           selection=AssetSelection.keys("desfa_ng_gcv_daily"))
 desfa_flows_daily_job = define_asset_job("desfa_flows_daily_job",
-                                          selection=AssetSelection.keys("desfa_flows_daily"))
+                                         selection=AssetSelection.keys("desfa_flows_daily"))
 desfa_ng_pressure_monthly_job = define_asset_job("desfa_ng_pressure_monthly_job",
                                                  selection=AssetSelection.keys("desfa_ng_pressure_monthly"))
 
 ipto_job = define_asset_job("ipto_job", selection=AssetSelection.groups("ipto")
-                                                  - AssetSelection.keys("ipto_daily_energy_balance"))
+                                                  - AssetSelection.keys("ipto_daily_energy_balance")
+                                                  - AssetSelection.keys("ipto_net_interconnection_flows"))
 ipto_daily_energy_balance_job = define_asset_job("ipto_daily_energy_balance_job",
                                                  selection=AssetSelection.keys("ipto_daily_energy_balance"))
+ipto_net_interconnection_flows_job = define_asset_job("ipto_net_interconnection_flows_job",
+                                                      selection=AssetSelection.keys("ipto_net_interconnection_flows"))
 
 entsoe_schedule = ScheduleDefinition(
     job=entsoe_job,
@@ -84,7 +87,6 @@ desfa_ng_pressure_monthly_schedule = ScheduleDefinition(
     cron_schedule="0 2 * * *",
 )
 
-
 ipto_schedule = ScheduleDefinition(
     job=ipto_job,
     cron_schedule="0 3 * * *",
@@ -95,6 +97,11 @@ ipto_daily_energy_balance_schedule = ScheduleDefinition(
     cron_schedule="0 3 * * *",
 )
 
+ipto_net_interconnection_flows_schedule = ScheduleDefinition(
+    job=ipto_net_interconnection_flows_job,
+    cron_schedule="0 3 * * *",
+)
+
 defs = Definitions(
     assets=all_assets,
     resources={
@@ -102,5 +109,6 @@ defs = Definitions(
     },
     schedules=[entsog_schedule, entsoe_hydro_schedule, entsoe_schedule, desfa_schedule,
                desfa_ng_quality_yearly_schedule, desfa_ng_gcv_daily_schedule, desfa_flows_daily_schedule,
-               desfa_ng_pressure_monthly_schedule, ipto_schedule, ipto_daily_energy_balance_schedule]
+               desfa_ng_pressure_monthly_schedule, ipto_schedule, ipto_daily_energy_balance_schedule,
+               ipto_net_interconnection_flows_schedule]
 )

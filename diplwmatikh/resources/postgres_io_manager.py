@@ -1,3 +1,4 @@
+from types import NoneType
 from typing import Any
 
 import pandas as pd
@@ -43,5 +44,7 @@ class PostgresIOManager(ConfigurableIOManager):
                    schema=self.dbschema)
 
             context.log.info(f"Successfully wrote to database.")
+        elif isinstance(obj, NoneType):
+            context.log.warning(f"PostgresIOManager received output of type NoneType. No action will be taken")
         else:
             raise ValueError(f"Unsupported object type {type(obj)} for PostgresIOManager.")
