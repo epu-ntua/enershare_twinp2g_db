@@ -35,6 +35,7 @@ def entsog_flows_daily(context: AssetExecutionContext):
 
         context.log.info(
             f"Fetched data from {day.strftime('%Y-%m-%d')} to {(day + pd.Timedelta(days=1)).strftime('%Y-%m-%d')}")
+        data = entsog_utils.label_potential_duplicates_with_tso(data)
         # Rename columns to more applicable names
         data.rename(columns={"direction_key": "point_type", "period_from": "timestamp", "point_label": "point_id"},
                     inplace=True)
@@ -52,9 +53,18 @@ def entsog_flows_daily(context: AssetExecutionContext):
         data = data[data['value'].notna()]
         bidaily_data.append(data)
 
-    complete_data = pd.concat(bidaily_data)
+    if len(bidaily_data) == 0:
+        return Output(value=None)
+    else:
+        complete_data = pd.concat(bidaily_data)
+        # For debugging purposes, log the duplicates if present.
+        if not complete_data.index.is_unique:
+            # Find duplicates in the MultiIndex
+            duplicates = complete_data.index.duplicated(keep=False)
+            # Print duplicates based on the MultiIndex
+            context.log.warning(f"Found duplicates in the index! They are as follows:\n{complete_data[duplicates]}")
 
-    return Output(value=complete_data)
+        return Output(value=complete_data)
 
 
 @asset(
@@ -79,6 +89,7 @@ def entsog_nominations_daily(context: AssetExecutionContext):
 
         context.log.info(
             f"Fetched data from {day.strftime('%Y-%m-%d')} to {(day + pd.Timedelta(days=1)).strftime('%Y-%m-%d')}")
+        data = entsog_utils.label_potential_duplicates_with_tso(data)
         # Rename columns to more applicable names
         data.rename(columns={"direction_key": "point_type", "period_from": "timestamp", "point_label": "point_id"},
                     inplace=True)
@@ -96,9 +107,18 @@ def entsog_nominations_daily(context: AssetExecutionContext):
         data = data[data['value'].notna()]
         bidaily_data.append(data)
 
-    complete_data = pd.concat(bidaily_data)
+    if len(bidaily_data) == 0:
+        return Output(value=None)
+    else:
+        complete_data = pd.concat(bidaily_data)
+        # For debugging purposes, log the duplicates if present.
+        if not complete_data.index.is_unique:
+            # Find duplicates in the MultiIndex
+            duplicates = complete_data.index.duplicated(keep=False)
+            # Print duplicates based on the MultiIndex
+            context.log.warning(f"Found duplicates in the index! They are as follows:\n{complete_data[duplicates]}")
 
-    return Output(value=complete_data)
+        return Output(value=complete_data)
 
 
 @asset(
@@ -123,6 +143,7 @@ def entsog_allocations_daily(context: AssetExecutionContext):
 
         context.log.info(
             f"Fetched data from {day.strftime('%Y-%m-%d')} to {(day + pd.Timedelta(days=1)).strftime('%Y-%m-%d')}")
+        data = entsog_utils.label_potential_duplicates_with_tso(data)
         # Rename columns to more applicable names
         data.rename(columns={"direction_key": "point_type", "period_from": "timestamp", "point_label": "point_id"},
                     inplace=True)
@@ -140,9 +161,18 @@ def entsog_allocations_daily(context: AssetExecutionContext):
         data = data[data['value'].notna()]
         bidaily_data.append(data)
 
-    complete_data = pd.concat(bidaily_data)
+    if len(bidaily_data) == 0:
+        return Output(value=None)
+    else:
+        complete_data = pd.concat(bidaily_data)
+        # For debugging purposes, log the duplicates if present.
+        if not complete_data.index.is_unique:
+            # Find duplicates in the MultiIndex
+            duplicates = complete_data.index.duplicated(keep=False)
+            # Print duplicates based on the MultiIndex
+            context.log.warning(f"Found duplicates in the index! They are as follows:\n{complete_data[duplicates]}")
 
-    return Output(value=complete_data)
+        return Output(value=complete_data)
 
 
 @asset(
@@ -168,6 +198,7 @@ def entsog_renominations_daily(context: AssetExecutionContext):
 
         context.log.info(
             f"Fetched data from {day.strftime('%Y-%m-%d')} to {(day + pd.Timedelta(days=1)).strftime('%Y-%m-%d')}")
+        data = entsog_utils.label_potential_duplicates_with_tso(data)
         # Rename columns to more applicable names
         data.rename(columns={"direction_key": "point_type", "period_from": "timestamp", "point_label": "point_id"},
                     inplace=True)
@@ -185,6 +216,15 @@ def entsog_renominations_daily(context: AssetExecutionContext):
         data = data[data['value'].notna()]
         bidaily_data.append(data)
 
-    complete_data = pd.concat(bidaily_data)
+    if len(bidaily_data) == 0:
+        return Output(value=None)
+    else:
+        complete_data = pd.concat(bidaily_data)
+        # For debugging purposes, log the duplicates if present.
+        if not complete_data.index.is_unique:
+            # Find duplicates in the MultiIndex
+            duplicates = complete_data.index.duplicated(keep=False)
+            # Print duplicates based on the MultiIndex
+            context.log.warning(f"Found duplicates in the index! They are as follows:\n{complete_data[duplicates]}")
 
-    return Output(value=complete_data)
+        return Output(value=complete_data)

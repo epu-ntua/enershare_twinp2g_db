@@ -7,6 +7,25 @@ import time
 from dagster import AssetExecutionContext
 from entsog import EntsogPandasClient
 
+# Dictionary that matches TSO EIC codes to TSO names
+tso_dict = {"21X-GR-A-A0A0A-G": "DESFA",
+            "21X000000001376X": "TAP"}
+
+
+# Some points can belong of different TSOs (e.g. both DESFA and TAP have Nea Mesimvria as a point)
+# The below function preemptively labels these points by adding their TSO as a suffix, to avoid deduplication
+# Needs to be called after the API response before any further processing is done on the dataframe
+def label_potential_duplicates_with_tso(df: pd.DataFrame) -> pd.DataFrame:
+    # So far, only Nea Mesimvria identified as a suspect
+    def modify_row(row):
+        if row['point_label'] == 'Nea Mesimvria':  # Condition to identify rows
+            return row['point_label'] + "_" + tso_dict[row['tso_eic_code']]  # Modification based on TSO EIC
+        else:
+            return row['point_label']  # Keep original value for rows that don't meet the condition
+
+    df['point_label'] = df.apply(modify_row, axis=1)
+    return df
+
 
 def greek_operator_point_directions():
     points = entsog.EntsogPandasClient().query_operator_point_directions()
