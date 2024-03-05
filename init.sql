@@ -122,8 +122,10 @@ CREATE TABLE ipto_3intraday_res_forecast (
 );
 
 CREATE TABLE ipto_week_ahead_load_forecast (
-  timestamp TIMESTAMP PRIMARY KEY,
-  load_forecast NUMERIC
+  timestamp TIMESTAMP,
+  target_timestamp TIMESTAMP,
+  load_forecast NUMERIC,
+  PRIMARY KEY (timestamp, target_timestamp)
 );
 
 CREATE TABLE ipto_net_interconnection_flows (
