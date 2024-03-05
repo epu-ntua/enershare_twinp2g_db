@@ -32,7 +32,8 @@ def entsog_flows_daily(context: AssetExecutionContext):
     for day in days_list:
         data = entsog_utils.entsog_api_call_with_retries(day, day + pd.Timedelta(days=1),
                                                          ['physical_flow'], keys, context)
-
+        if data.empty:  # Happens when no matching data is found
+            continue
         context.log.info(
             f"Fetched data from {day.strftime('%Y-%m-%d')} to {(day + pd.Timedelta(days=1)).strftime('%Y-%m-%d')}")
         data = entsog_utils.label_potential_duplicates_with_tso(data)
@@ -86,7 +87,8 @@ def entsog_nominations_daily(context: AssetExecutionContext):
     bidaily_data = []
     for day in days_list:
         data = entsog_utils.entsog_api_call_with_retries(day, day + pd.Timedelta(days=1), ['nomination'], keys, context)
-
+        if data.empty:  # Happens when no matching data is found
+            continue
         context.log.info(
             f"Fetched data from {day.strftime('%Y-%m-%d')} to {(day + pd.Timedelta(days=1)).strftime('%Y-%m-%d')}")
         data = entsog_utils.label_potential_duplicates_with_tso(data)
@@ -140,7 +142,8 @@ def entsog_allocations_daily(context: AssetExecutionContext):
     bidaily_data = []
     for day in days_list:
         data = entsog_utils.entsog_api_call_with_retries(day, day + pd.Timedelta(days=1), ['allocation'], keys, context)
-
+        if data.empty:  # Happens when no matching data is found
+            continue
         context.log.info(
             f"Fetched data from {day.strftime('%Y-%m-%d')} to {(day + pd.Timedelta(days=1)).strftime('%Y-%m-%d')}")
         data = entsog_utils.label_potential_duplicates_with_tso(data)
@@ -195,7 +198,8 @@ def entsog_renominations_daily(context: AssetExecutionContext):
     for day in days_list:
         data = entsog_utils.entsog_api_call_with_retries(day, day + pd.Timedelta(days=1),
                                                          ['renomination'], keys, context)
-
+        if data.empty:  # Happens when no matching data is found
+            continue
         context.log.info(
             f"Fetched data from {day.strftime('%Y-%m-%d')} to {(day + pd.Timedelta(days=1)).strftime('%Y-%m-%d')}")
         data = entsog_utils.label_potential_duplicates_with_tso(data)

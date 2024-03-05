@@ -6,6 +6,7 @@ import time
 
 from dagster import AssetExecutionContext
 from entsog import EntsogPandasClient
+from entsog.exceptions import NoMatchingDataError
 
 # Dictionary that matches TSO EIC codes to TSO names
 tso_dict = {"21X-GR-A-A0A0A-G": "DESFA",
@@ -58,6 +59,9 @@ def entsog_api_call_with_retries(start: pd.Timestamp,
             if attempt > 0:
                 context.log.info(f"Attempt no {attempt + 1} successful.")
             return data
+        except NoMatchingDataError as e:
+            context.log.info(f"No matching data found for period {start} to {end}\nSkipping.")
+            return pd.DataFrame()
         except Exception as e:
             context.log.info(f"Attempt no. {attempt + 1} failed with error: {type(e).__name__}: {e}")
             last_exception = e
