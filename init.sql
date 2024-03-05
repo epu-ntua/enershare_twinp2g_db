@@ -170,10 +170,11 @@ CREATE TABLE entsog_renominations_daily (
 
 -- DESFA tables
 CREATE TABLE desfa_flows_daily (
-    timestamp TIMESTAMP PRIMARY KEY,
+    timestamp TIMESTAMP,
     value NUMERIC,
     point_id TEXT,
-    point_type TEXT
+    point_type TEXT,
+    PRIMARY KEY (timestamp, point_id, point_type)
 );
 
 CREATE TABLE desfa_flows_hourly (

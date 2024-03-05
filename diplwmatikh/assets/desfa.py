@@ -33,23 +33,76 @@ entry_points = ["AGIA TRIADA", "SIDIROKASTRO", "KIPI", "NEA MESIMVRIA"]
 # DESFA assets
 
 @asset(
-    partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
+    partitions_def=StaticPartitionsDefinition(["desfa_flows_daily_monopartition"]),
     io_manager_key="postgres_io_manager",
     group_name="desfa",
     op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"},
     description="Deliveries / Off-takes (imports for entry points/off-takes per exit points) per day since 2008"
 )
 def desfa_flows_daily(context: AssetExecutionContext):
-    start, end = timewindow_to_ts(context.partition_time_window)
-    context.log.info(f"Handling partition from {start} to {end}")
+    url = 'https://www.desfa.gr/userfiles/pdflist/DDRA/Flows.xlsx'
 
-    entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
-    country_code = 'GR'
+    # Fetch the content of the .xls file
+    response = requests.get(url)
+    dataframes = {}
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Use BytesIO to create a file-like object from the content
+        file_content = BytesIO(response.content)
+        df = pd.read_excel(file_content, sheet_name=0)
 
-    dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
-    dataframe.index.rename(name='timestamp', inplace=True)
-    dataframe.columns = ['actual_load']
-    return Output(value=dataframe)
+        df = df.drop(df.columns[5], axis=1)  # Remove 5th column starting from 0 (empty)
+        df = df.drop(df.index[0:3])  # Remove first 3 rows (not needed for data)
+        df = df[~df.iloc[:, 0].astype(str).str.contains('ΣΥΝΟΛΟ')]  # Remove lines that contain aggregates
+
+        # Now to transform the dataframe to make the first row (barring the first element) into an index
+
+        new_headers = df.iloc[0, 1:].tolist()
+        # Adding suffix "_exit" to the first 4 headers and "_entry" to the rest, since a point may be bidirectional
+        new_headers = [x + "_entry" for x in new_headers[:4]] + [x + "_exit" for x in new_headers[4:]]
+
+        # We will remove the suffixes later
+        def remove_suffix(point: str):
+            if point.endswith("_entry"):
+                return point[:-6]
+            else:
+                return point[:-5]
+
+        df.columns = ['timestamp'] + new_headers  # Keep 'timestamp' for the first column and update the rest
+        # Drop the first row
+        df = df.drop(df.index[0])
+        # Reset index if necessary
+        df.reset_index(drop=True, inplace=True)
+
+        df['timestamp'] = pd.to_datetime(df['timestamp'], format='%Y')
+
+        # Melt the DataFrame to go from wide to long format
+        df_long = pd.melt(df, id_vars=['timestamp'], var_name='point_id', value_name='value')
+
+        # Set the new index using the 'timestamp' and 'point_id' columns to create a MultiIndex
+        df_long.set_index(['timestamp', 'point_id'], inplace=True)
+
+        # Now, to add "entry"/"exit" labels to our points
+        def label_point_as_entry_or_exit(point: str):
+            if point.endswith("_entry"):
+                return "entry"
+            else:
+                return "exit"
+
+        # Apply this function to the 'point_id' index level
+        processed_header = df_long.index.get_level_values('point_id').map(label_point_as_entry_or_exit)
+        # Add the processed values as a new level to the index
+        df_long['point_type'] = processed_header
+        # Then set this new column as an additional level of the index
+        df_long.set_index('point_type', append=True, inplace=True)
+
+        df_long.reset_index(drop=False, inplace=True)
+        df_long['point_id'] = df_long['point_id'].apply(remove_suffix)
+
+        df_long.set_index(['timestamp', 'point_id', 'point_type'], inplace=True)
+        return Output(value=df_long)
+    else:
+        raise Exception(f"Failed to fetch the file, status code: {response.status_code}")
 
 
 @asset(
