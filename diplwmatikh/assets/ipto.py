@@ -34,45 +34,393 @@ top_level_url = 'https://www.admie.gr/getOperationMarketFilewRange'
 # IPTO assets
 
 @asset(
-    partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
+    partitions_def=MonthlyPartitionsDefinition(start_date="2020-10-01"),
     io_manager_key="postgres_io_manager",
     group_name="ipto",
-    op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
+    op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"},
+    description="Day-ahead System Total Load Forecast (First run)"
 )
-def ipto_day_ahead_load_forecast(context: AssetExecutionContext):
+def ipto_1day_ahead_load_forecast(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
     context.log.info(f"Handling partition from {start} to {end}")
+    file_category = "ISP1DayAheadLoadForecast"
 
-    entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
-    country_code = 'GR'
+    params = parameters(start, end, file_category)
 
-    dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
-    dataframe.index.rename(name='timestamp', inplace=True)
-    dataframe.columns = ['actual_load']
-    return Output(value=dataframe)
+    context.log.info(f"Fetching file locations from {top_level_url}")
+    response = requests.get(top_level_url, params=params)
+
+    if response.status_code == 200:
+        data_with_duplicates = response.json()
+        data = deduplicate_json(data_with_duplicates, file_category)
+
+        dataframes = []
+        for file in data:
+            xls_url = file['file_path']
+
+            # Fetch the content of the .xls file
+            inner_response = requests.get(xls_url)
+            # Check if the request was successful
+            if response.status_code == 200:
+                # Use BytesIO to create a file-like object from the content
+                file_content = BytesIO(inner_response.content)
+                df = pd.read_excel(file_content, sheet_name=0, engine='openpyxl')
+
+                # Contained date sometimes false. The correct date can be found via the first part of the filename.
+                timestamp_str = xls_url.split('/')[-1].split('_')[0]
+                timestamp = pd.Timestamp(timestamp_str)
+                context.log.info(f"Got timestamp {timestamp} from URL: {xls_url}")
+
+                # Asserting the format is as expected
+                assert df.iloc[:, 36].isnull().all(), \
+                    f"Unrecognized format: not all elements of column 36 are null as expected"
+                assert df.columns[0] == 'Forecast Daily Analysis per Entity', \
+                    f"Unrecognized format: first column is {df.columns[0]}not expected"
+
+                df.drop(df.columns[36], axis=1, inplace=True)   # 36th column is empty, remove it
+                df.drop(df.index[0:2], inplace=True)            # Discard first two rows (junk)
+                df.drop(df.columns[0:2], axis=1, inplace=True)  # Discard first two columns (junk)
+
+                # Reshape and properly label and index dataframe
+                df_transposed = df.transpose()
+                df_transposed.columns = ['load_forecast']
+                date_range = pd.date_range(start=timestamp, periods=len(df_transposed), freq='30T')
+                df_transposed.index = date_range
+                df_transposed.index.name = 'timestamp'
+
+                dataframes.append(df_transposed)
+
+            else:
+                raise Exception(f"Failed to fetch the xlsx file {xls_url}, status code: {inner_response.status_code}")
+        final_df = pd.concat(dataframes, ignore_index=False)
+        return Output(value=final_df)
+    else:
+        raise Exception(f"Failed to fetch the file from {top_level_url}, status code: {response.status_code}")
+
+@asset(
+    partitions_def=MonthlyPartitionsDefinition(start_date="2020-10-01"),
+    io_manager_key="postgres_io_manager",
+    group_name="ipto",
+    op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"},
+    description="Day-ahead System Total Load Forecast (Second run)"
+)
+def ipto_2day_ahead_load_forecast(context: AssetExecutionContext):
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
+    file_category = "ISP2DayAheadLoadForecast"
+
+    params = parameters(start, end, file_category)
+
+    context.log.info(f"Fetching file locations from {top_level_url}")
+    response = requests.get(top_level_url, params=params)
+
+    if response.status_code == 200:
+        data_with_duplicates = response.json()
+        data = deduplicate_json(data_with_duplicates, file_category)
+
+        dataframes = []
+        for file in data:
+            xls_url = file['file_path']
+
+            # Fetch the content of the .xls file
+            inner_response = requests.get(xls_url)
+            # Check if the request was successful
+            if response.status_code == 200:
+                # Use BytesIO to create a file-like object from the content
+                file_content = BytesIO(inner_response.content)
+                df = pd.read_excel(file_content, sheet_name=0, engine='openpyxl')
+
+                # Contained date sometimes false. The correct date can be found via the first part of the filename.
+                timestamp_str = xls_url.split('/')[-1].split('_')[0]
+                timestamp = pd.Timestamp(timestamp_str)
+                context.log.info(f"Got timestamp {timestamp} from URL: {xls_url}")
+
+                # Asserting the format is as expected
+                assert df.iloc[:, 36].isnull().all(), \
+                    f"Unrecognized format: not all elements of column 36 are null as expected"
+                assert df.columns[0] == 'Forecast Daily Analysis per Entity', \
+                    f"Unrecognized format: first column is {df.columns[0]}not expected"
+
+                df.drop(df.columns[36], axis=1, inplace=True)  # 36th column is empty, remove it
+                df.drop(df.index[0:2], inplace=True)  # Discard first two rows (junk)
+                df.drop(df.columns[0:2], axis=1, inplace=True)  # Discard first two columns (junk)
+
+                # Reshape and properly label and index dataframe
+                df_transposed = df.transpose()
+                df_transposed.columns = ['load_forecast']
+                date_range = pd.date_range(start=timestamp, periods=len(df_transposed), freq='30T')
+                df_transposed.index = date_range
+                df_transposed.index.name = 'timestamp'
+
+                dataframes.append(df_transposed)
+
+            else:
+                raise Exception(f"Failed to fetch the xlsx file {xls_url}, status code: {inner_response.status_code}")
+        final_df = pd.concat(dataframes, ignore_index=False)
+        return Output(value=final_df)
+    else:
+        raise Exception(f"Failed to fetch the file from {top_level_url}, status code: {response.status_code}")
+
+@asset(
+    partitions_def=MonthlyPartitionsDefinition(start_date="2020-10-01"),
+    io_manager_key="postgres_io_manager",
+    group_name="ipto",
+    op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"},
+    description="System Total Load Forecast (Third run/Intra-day)"
+)
+def ipto_3intraday_load_forecast(context: AssetExecutionContext):
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
+    file_category = "ISP3IntraDayLoadForecast"
+
+    params = parameters(start, end, file_category)
+
+    context.log.info(f"Fetching file locations from {top_level_url}")
+    response = requests.get(top_level_url, params=params)
+
+    if response.status_code == 200:
+        data_with_duplicates = response.json()
+        data = deduplicate_json(data_with_duplicates, file_category)
+
+        dataframes = []
+        for file in data:
+            xls_url = file['file_path']
+
+            # Fetch the content of the .xls file
+            inner_response = requests.get(xls_url)
+            # Check if the request was successful
+            if response.status_code == 200:
+                # Use BytesIO to create a file-like object from the content
+                file_content = BytesIO(inner_response.content)
+                df = pd.read_excel(file_content, sheet_name=0, engine='openpyxl')
+
+                # Contained date sometimes false. The correct date can be found via the first part of the filename.
+                timestamp_str = xls_url.split('/')[-1].split('_')[0]
+                timestamp = pd.Timestamp(timestamp_str)
+                context.log.info(f"Got timestamp {timestamp} from URL: {xls_url}")
+
+                # Asserting the format is as expected
+                assert df.iloc[:, 36].isnull().all(), \
+                    f"Unrecognized format: not all elements of column 36 are null as expected"
+                assert df.columns[0] == 'Forecast Daily Analysis per Entity', \
+                    f"Unrecognized format: first column is {df.columns[0]}not expected"
+
+                df.drop(df.columns[36], axis=1, inplace=True)  # 36th column is empty, remove it
+                df.drop(df.index[0:2], inplace=True)  # Discard first two rows (junk)
+                df.drop(df.columns[0:2], axis=1, inplace=True)  # Discard first two columns (junk)
+
+                # Reshape and properly label and index dataframe
+                df_transposed = df.transpose()
+                df_transposed.columns = ['load_forecast']
+                date_range = pd.date_range(start=timestamp, periods=len(df_transposed), freq='30T')
+                df_transposed.index = date_range
+                df_transposed.index.name = 'timestamp'
+
+                dataframes.append(df_transposed)
+
+            else:
+                raise Exception(f"Failed to fetch the xlsx file {xls_url}, status code: {inner_response.status_code}")
+        final_df = pd.concat(dataframes, ignore_index=False)
+        return Output(value=final_df)
+    else:
+        raise Exception(f"Failed to fetch the file from {top_level_url}, status code: {response.status_code}")
 
 
 @asset(
-    partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
+    partitions_def=MonthlyPartitionsDefinition(start_date="2020-10-01"),
     io_manager_key="postgres_io_manager",
     group_name="ipto",
-    op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
+    op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"},
+    description="Day-ahead Renewables Forecast (First run)"
 )
-def ipto_day_ahead_res_forecast(context: AssetExecutionContext):
+def ipto_1day_ahead_res_forecast(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
     context.log.info(f"Handling partition from {start} to {end}")
+    file_category = "ISP1DayAheadRESForecast"
 
-    entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
-    country_code = 'GR'
+    params = parameters(start, end, file_category)
 
-    dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
-    dataframe.index.rename(name='timestamp', inplace=True)
-    dataframe.columns = ['actual_load']
-    return Output(value=dataframe)
+    context.log.info(f"Fetching file locations from {top_level_url}")
+    response = requests.get(top_level_url, params=params)
+
+    if response.status_code == 200:
+        data_with_duplicates = response.json()
+        data = deduplicate_json(data_with_duplicates, file_category)
+
+        dataframes = []
+        for file in data:
+            xls_url = file['file_path']
+
+            # Fetch the content of the .xls file
+            inner_response = requests.get(xls_url)
+            # Check if the request was successful
+            if response.status_code == 200:
+                # Use BytesIO to create a file-like object from the content
+                file_content = BytesIO(inner_response.content)
+                df = pd.read_excel(file_content, sheet_name=0, engine='openpyxl')
+
+                # Contained date sometimes false. The correct date can be found via the first part of the filename.
+                timestamp_str = xls_url.split('/')[-1].split('_')[0]
+                timestamp = pd.Timestamp(timestamp_str)
+                context.log.info(f"Got timestamp {timestamp} from URL: {xls_url}")
+
+                # Asserting the format is as expected
+                assert df.iloc[:, 36].isnull().all(), \
+                    f"Unrecognized format: not all elements of column 36 are null as expected"
+                assert df.columns[0] == 'Forecast Daily Analysis per Entity', \
+                    f"Unrecognized format: first column is {df.columns[0]}not expected"
+
+                df.drop(df.columns[36], axis=1, inplace=True)  # 36th column is empty, remove it
+                df.drop(df.index[0:2], inplace=True)  # Discard first two rows (junk)
+                df.drop(df.columns[0:2], axis=1, inplace=True)  # Discard first two columns (junk)
+
+                # Reshape and properly label and index dataframe
+                df_transposed = df.transpose()
+                df_transposed.columns = ['res_forecast']
+                date_range = pd.date_range(start=timestamp, periods=len(df_transposed), freq='30T')
+                df_transposed.index = date_range
+                df_transposed.index.name = 'timestamp'
+
+                dataframes.append(df_transposed)
+
+            else:
+                raise Exception(f"Failed to fetch the xlsx file {xls_url}, status code: {inner_response.status_code}")
+        final_df = pd.concat(dataframes, ignore_index=False)
+        return Output(value=final_df)
+    else:
+        raise Exception(f"Failed to fetch the file from {top_level_url}, status code: {response.status_code}")
+@asset(
+    partitions_def=MonthlyPartitionsDefinition(start_date="2020-10-01"),
+    io_manager_key="postgres_io_manager",
+    group_name="ipto",
+    op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"},
+    description="Day-ahead Renewables Forecast (Second run)"
+)
+def ipto_2day_ahead_res_forecast(context: AssetExecutionContext):
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
+    file_category = "ISP2DayAheadRESForecast"
+
+    params = parameters(start, end, file_category)
+
+    context.log.info(f"Fetching file locations from {top_level_url}")
+    response = requests.get(top_level_url, params=params)
+
+    if response.status_code == 200:
+        data_with_duplicates = response.json()
+        data = deduplicate_json(data_with_duplicates, file_category)
+
+        dataframes = []
+        for file in data:
+            xls_url = file['file_path']
+
+            # Fetch the content of the .xls file
+            inner_response = requests.get(xls_url)
+            # Check if the request was successful
+            if response.status_code == 200:
+                # Use BytesIO to create a file-like object from the content
+                file_content = BytesIO(inner_response.content)
+                df = pd.read_excel(file_content, sheet_name=0, engine='openpyxl')
+
+                # Contained date sometimes false. The correct date can be found via the first part of the filename.
+                timestamp_str = xls_url.split('/')[-1].split('_')[0]
+                timestamp = pd.Timestamp(timestamp_str)
+                context.log.info(f"Got timestamp {timestamp} from URL: {xls_url}")
+
+                # Asserting the format is as expected
+                assert df.iloc[:, 36].isnull().all(), \
+                    f"Unrecognized format: not all elements of column 36 are null as expected"
+                assert df.columns[0] == 'Forecast Daily Analysis per Entity', \
+                    f"Unrecognized format: first column is {df.columns[0]}not expected"
+
+                df.drop(df.columns[36], axis=1, inplace=True)  # 36th column is empty, remove it
+                df.drop(df.index[0:2], inplace=True)  # Discard first two rows (junk)
+                df.drop(df.columns[0:2], axis=1, inplace=True)  # Discard first two columns (junk)
+
+                # Reshape and properly label and index dataframe
+                df_transposed = df.transpose()
+                df_transposed.columns = ['res_forecast']
+                date_range = pd.date_range(start=timestamp, periods=len(df_transposed), freq='30T')
+                df_transposed.index = date_range
+                df_transposed.index.name = 'timestamp'
+
+                dataframes.append(df_transposed)
+
+            else:
+                raise Exception(f"Failed to fetch the xlsx file {xls_url}, status code: {inner_response.status_code}")
+        final_df = pd.concat(dataframes, ignore_index=False)
+        return Output(value=final_df)
+    else:
+        raise Exception(f"Failed to fetch the file from {top_level_url}, status code: {response.status_code}")
+
+@asset(
+    partitions_def=MonthlyPartitionsDefinition(start_date="2020-10-01"),
+    io_manager_key="postgres_io_manager",
+    group_name="ipto",
+    op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"},
+    description="Renewables Forecast (Third run/Intra-day)"
+)
+def ipto_3intraday_res_forecast(context: AssetExecutionContext):
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
+    file_category = "ISP3IntraDayRESForecast"
+
+    params = parameters(start, end, file_category)
+
+    context.log.info(f"Fetching file locations from {top_level_url}")
+    response = requests.get(top_level_url, params=params)
+
+    if response.status_code == 200:
+        data_with_duplicates = response.json()
+        data = deduplicate_json(data_with_duplicates, file_category)
+
+        dataframes = []
+        for file in data:
+            xls_url = file['file_path']
+
+            # Fetch the content of the .xls file
+            inner_response = requests.get(xls_url)
+            # Check if the request was successful
+            if response.status_code == 200:
+                # Use BytesIO to create a file-like object from the content
+                file_content = BytesIO(inner_response.content)
+                df = pd.read_excel(file_content, sheet_name=0, engine='openpyxl')
+
+                # Contained date sometimes false. The correct date can be found via the first part of the filename.
+                timestamp_str = xls_url.split('/')[-1].split('_')[0]
+                timestamp = pd.Timestamp(timestamp_str)
+                context.log.info(f"Got timestamp {timestamp} from URL: {xls_url}")
+
+                # Asserting the format is as expected
+                assert df.iloc[:, 36].isnull().all(), \
+                    f"Unrecognized format: not all elements of column 36 are null as expected"
+                assert df.columns[0] == 'Forecast Daily Analysis per Entity', \
+                    f"Unrecognized format: first column is {df.columns[0]}not expected"
+
+                df.drop(df.columns[36], axis=1, inplace=True)  # 36th column is empty, remove it
+                df.drop(df.index[0:2], inplace=True)  # Discard first two rows (junk)
+                df.drop(df.columns[0:2], axis=1, inplace=True)  # Discard first two columns (junk)
+
+                # Reshape and properly label and index dataframe
+                df_transposed = df.transpose()
+                df_transposed.columns = ['res_forecast']
+                date_range = pd.date_range(start=timestamp, periods=len(df_transposed), freq='30T')
+                df_transposed.index = date_range
+                df_transposed.index.name = 'timestamp'
+
+                dataframes.append(df_transposed)
+
+            else:
+                raise Exception(f"Failed to fetch the xlsx file {xls_url}, status code: {inner_response.status_code}")
+        final_df = pd.concat(dataframes, ignore_index=False)
+        return Output(value=final_df)
+    else:
+        raise Exception(f"Failed to fetch the file from {top_level_url}, status code: {response.status_code}")
+
 
 
 @asset(
-    partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
+    partitions_def=MonthlyPartitionsDefinition(start_date="2020-10-01"),
     io_manager_key="postgres_io_manager",
     group_name="ipto",
     op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
@@ -91,7 +439,7 @@ def ipto_week_ahead_load_forecast(context: AssetExecutionContext):
 
 
 @asset(
-    partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
+    partitions_def=MonthlyPartitionsDefinition(start_date="2020-10-01"),
     io_manager_key="postgres_io_manager",
     group_name="ipto",
     op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
@@ -110,7 +458,7 @@ def ipto_net_interconnection_flows(context: AssetExecutionContext):
 
 
 @asset(
-    partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
+    partitions_def=MonthlyPartitionsDefinition(start_date="2020-10-01"),
     io_manager_key="postgres_io_manager",
     group_name="ipto",
     op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
@@ -129,7 +477,7 @@ def ipto_res_injections(context: AssetExecutionContext):
 
 
 @asset(
-    partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
+    partitions_def=MonthlyPartitionsDefinition(start_date="2020-10-01"),
     io_manager_key="postgres_io_manager",
     group_name="ipto",
     op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
@@ -151,7 +499,8 @@ def ipto_unit_production(context: AssetExecutionContext):
     partitions_def=MonthlyPartitionsDefinition(start_date="2020-11-01"),
     io_manager_key="postgres_io_manager",
     group_name="ipto",
-    op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"}
+    op_tags={"dagster/concurrency_key": "ipto", "concurrency_tag": "ipto"},
+    description="Daily energy balance report (MWh for different energy sources)"
 )
 def ipto_daily_energy_balance(context: AssetExecutionContext):
 
@@ -211,7 +560,7 @@ def ipto_daily_energy_balance(context: AssetExecutionContext):
                 dataframes.append(new_df)
 
             else:
-                raise Exception(f"Failed to fetch the xls file {xls_url}, status code: {inner_response.status_code}")
+                raise Exception(f"Failed to fetch the xlsx file {xls_url}, status code: {inner_response.status_code}")
         final_df = pd.concat(dataframes, ignore_index=False)
         return Output(value=final_df)
     else:

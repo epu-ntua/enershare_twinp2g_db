@@ -91,12 +91,32 @@ CREATE TABLE actual_generation_per_generation_unit (
 );
 
 -- IPTO tables
-CREATE TABLE ipto_day_ahead_load_forecast (
+CREATE TABLE ipto_1day_ahead_load_forecast (
   timestamp TIMESTAMP PRIMARY KEY,
   load_forecast NUMERIC
 );
 
-CREATE TABLE ipto_day_ahead_res_forecast (
+CREATE TABLE ipto_2day_ahead_load_forecast (
+  timestamp TIMESTAMP PRIMARY KEY,
+  load_forecast NUMERIC
+);
+
+CREATE TABLE ipto_3intraday_load_forecast (
+  timestamp TIMESTAMP PRIMARY KEY,
+  load_forecast NUMERIC
+);
+
+CREATE TABLE ipto_1day_ahead_res_forecast (
+  timestamp TIMESTAMP PRIMARY KEY,
+  res_forecast NUMERIC
+);
+
+CREATE TABLE ipto_2day_ahead_res_forecast (
+  timestamp TIMESTAMP PRIMARY KEY,
+  res_forecast NUMERIC
+);
+
+CREATE TABLE ipto_3intraday_res_forecast (
   timestamp TIMESTAMP PRIMARY KEY,
   res_forecast NUMERIC
 );

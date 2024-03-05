@@ -184,7 +184,6 @@ def entsog_renominations_daily(context: AssetExecutionContext):
         # Remove rows where 'value' contains None
         data = data[data['value'].notna()]
         bidaily_data.append(data)
-    context.log.info("Completed fetching data for ")
 
     complete_data = pd.concat(bidaily_data)
 
