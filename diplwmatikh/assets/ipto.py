@@ -716,7 +716,7 @@ def ipto_unit_production(context: AssetExecutionContext):
                 lignite_subblock_points = lignite_subblock.iloc[:, 0].to_list()
                 lignite_subblock_points = list(map(lambda x: f"LIGNITE {x}", lignite_subblock_points))
                 lignite_subblock_data = lignite_subblock.iloc[:, 1:]
-                lignite_subblock_data_flattened = lignite_subblock_data.stack().reset_index()
+                lignite_subblock_data_flattened = lignite_subblock_data.stack(dropna=False).reset_index()
 
                 # Generate timestamp index range
                 ts_index = pd.date_range(start=timestamp_start, periods=24, freq='60T')
@@ -754,7 +754,7 @@ def ipto_unit_production(context: AssetExecutionContext):
                 gas_subblock_points = gas_subblock.iloc[:, 0].to_list()
                 gas_subblock_points = list(map(lambda x: f"GAS {x}", gas_subblock_points))
                 gas_subblock_data = gas_subblock.iloc[:, 1:]
-                gas_subblock_data_flattened = gas_subblock_data.stack().reset_index()
+                gas_subblock_data_flattened = gas_subblock_data.stack(dropna=False).reset_index()
 
                 # Generate timestamp index range
                 ts_index = pd.date_range(start=timestamp_start, periods=24, freq='60T')
@@ -793,7 +793,7 @@ def ipto_unit_production(context: AssetExecutionContext):
                 hydro_subblock_points = hydro_subblock.iloc[:, 0].to_list()
                 hydro_subblock_points = list(map(lambda x: f"HYDRO {x}", hydro_subblock_points))
                 hydro_subblock_data = hydro_subblock.iloc[:, 1:]
-                hydro_subblock_data_flattened = hydro_subblock_data.stack().reset_index()
+                hydro_subblock_data_flattened = hydro_subblock_data.stack(dropna=False).reset_index()
 
                 # Generate timestamp index range
                 ts_index = pd.date_range(start=timestamp_start, periods=24, freq='60T')
@@ -837,7 +837,7 @@ def ipto_unit_production(context: AssetExecutionContext):
                 res_subblock_points = res_subblock.iloc[:, 0].to_list()
                 res_subblock_points = list(map(lambda x: f"RES {x}", res_subblock_points))
                 res_subblock_data = res_subblock.iloc[:, 1:]
-                res_subblock_data_flattened = res_subblock_data.stack().reset_index()
+                res_subblock_data_flattened = res_subblock_data.stack(dropna=False).reset_index()
 
                 # Generate timestamp index range
                 ts_index = pd.date_range(start=timestamp_start, periods=24, freq='60T')
