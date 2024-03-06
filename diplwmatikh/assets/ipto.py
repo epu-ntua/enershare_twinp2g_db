@@ -656,11 +656,9 @@ def ipto_unit_production(context: AssetExecutionContext):
 
     if response.status_code == 200:
         data_with_duplicates = response.json()
-        # print(json.dumps(data_with_duplicates, indent=4, ensure_ascii=False))
 
         data = deduplicate_json(data_with_duplicates, file_category, 'xls')
 
-        # print(json.dumps(data, indent=4, ensure_ascii=False))
         dataframes = []
         for file in data:
             xls_url = file['file_path']

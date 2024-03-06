@@ -1,3 +1,4 @@
+import json
 from typing import List, Tuple
 
 import re
@@ -8,6 +9,7 @@ def parameters(start: pd.Timestamp, end: pd.Timestamp, file_category: str) -> Li
     return [("dateStart", start.strftime('%Y-%m-%d')),
             ("dateEnd", end.strftime('%Y-%m-%d')),
             ("FileCategory", file_category)]
+
 
 def deduplicate_json(json_file, file_category: str, filetype: str = "xlsx"):
     # Step 1: Define a regex pattern to match URLs of the format "*{file_category}_0x.xlsx"
@@ -32,6 +34,16 @@ def deduplicate_json(json_file, file_category: str, filetype: str = "xlsx"):
     # Step 5: Rebuild the JSON data with the filtered URLs
     filtered_json_data = [{"file_path": url} for url in final_urls]
 
-    return filtered_json_data
+    # This is independent of the previous steps: sometimes a file is seen more than once, with a different preceding URL
+    # In this case, keep only the first instance.
+    unique_timestamps = set()
+    unique_objects = []
 
+    for obj in filtered_json_data:
+        field_value = obj['file_path']
+        timestamp_str = field_value.split('/')[-1].split('_')[0]
+        if timestamp_str not in unique_timestamps:
+            unique_timestamps.add(timestamp_str)
+            unique_objects.append(obj)
 
+    return unique_objects
