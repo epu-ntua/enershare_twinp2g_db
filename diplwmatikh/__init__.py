@@ -1,6 +1,4 @@
-from types import ModuleType
-
-from dagster import Definitions, load_assets_from_modules, EnvVar, ScheduleDefinition, AssetSelection, define_asset_job, \
+from dagster import Definitions, EnvVar, ScheduleDefinition, AssetSelection, define_asset_job, \
     load_assets_from_package_module
 
 from . import assets
@@ -42,13 +40,16 @@ desfa_ng_pressure_monthly_job = define_asset_job("desfa_ng_pressure_monthly_job"
 ipto_job = define_asset_job("ipto_job", selection=AssetSelection.groups("ipto")
                                                   - AssetSelection.keys("ipto_daily_energy_balance")
                                                   - AssetSelection.keys("ipto_net_interconnection_flows")
-                                                  - AssetSelection.keys("ipto_res_injections"))
+                                                  - AssetSelection.keys("ipto_res_injections")
+                                                  - AssetSelection.keys("ipto_unit_production"))
 ipto_daily_energy_balance_job = define_asset_job("ipto_daily_energy_balance_job",
                                                  selection=AssetSelection.keys("ipto_daily_energy_balance"))
 ipto_net_interconnection_flows_job = define_asset_job("ipto_net_interconnection_flows_job",
                                                       selection=AssetSelection.keys("ipto_net_interconnection_flows"))
 ipto_res_injections_job = define_asset_job("ipto_res_injections_job",
                                            selection=AssetSelection.keys("ipto_res_injections"))
+ipto_unit_production_job = define_asset_job("ipto_unit_production_job",
+                                            selection=AssetSelection.keys("ipto_unit_production"))
 
 entsoe_schedule = ScheduleDefinition(
     job=entsoe_job,
@@ -110,6 +111,11 @@ ipto_res_injections_schedule = ScheduleDefinition(
     cron_schedule="0 3 * * *",
 )
 
+ipto_unit_production_schedule = ScheduleDefinition(
+    job=ipto_unit_production_job,
+    cron_schedule="0 3 * * *",
+)
+
 defs = Definitions(
     assets=all_assets,
     resources={
@@ -118,5 +124,5 @@ defs = Definitions(
     schedules=[entsog_schedule, entsoe_hydro_schedule, entsoe_schedule, desfa_schedule,
                desfa_ng_quality_yearly_schedule, desfa_ng_gcv_daily_schedule, desfa_flows_daily_schedule,
                desfa_ng_pressure_monthly_schedule, ipto_schedule, ipto_daily_energy_balance_schedule,
-               ipto_net_interconnection_flows_schedule, ipto_res_injections_schedule]
+               ipto_net_interconnection_flows_schedule, ipto_res_injections_schedule, ipto_unit_production_schedule]
 )

@@ -1,3 +1,5 @@
+from typing import List, Tuple
+
 import pandas as pd
 import numpy as np
 import pytz
@@ -35,3 +37,33 @@ def replace_dash_with_nan(cell):
         return np.nan
     else:
         return cell
+
+def find_string_in_df_by_index(df, search_string, case_sensitive=False) -> List[Tuple[int, int]]:
+    """
+    Find all occurrences of a string within a pandas DataFrame by indices.
+
+    Parameters:
+    - df: Pandas DataFrame to search in.
+    - search_string: String to search for.
+    - case_sensitive: Boolean indicating if the search should be case sensitive.
+
+    Returns:
+    - A list of tuples with (row index, column index) for each occurrence.
+    """
+    # Optionally convert both the DataFrame and search string to lowercase
+    if not case_sensitive:
+        temp_df = df.map(lambda x: str(x).lower())
+        search_string = search_string.lower()
+    else:
+        temp_df = df.map(str)
+
+    # Create a boolean mask where the condition is True
+    mask = temp_df.map(lambda x: search_string in x)
+
+    # Find row and column indices where the condition is True
+    row_indices, col_indices = np.where(mask)
+
+    # Combine row indices and column indices into a list of tuples
+    result = list(zip(row_indices, col_indices))
+
+    return result
