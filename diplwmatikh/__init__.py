@@ -27,7 +27,8 @@ desfa_job = define_asset_job("desfa_job",
                                        - AssetSelection.keys("desfa_ng_quality_yearly")
                                        - AssetSelection.keys("desfa_ng_gcv_daily")
                                        - AssetSelection.keys("desfa_flows_daily")
-                                       - AssetSelection.keys("desfa_ng_pressure_monthly"))
+                                       - AssetSelection.keys("desfa_ng_pressure_monthly")
+                                       - AssetSelection.keys("desfa_estimated_vs_actual_offtakes"))
 desfa_ng_quality_yearly_job = define_asset_job("desfa_ng_quality_yearly_job",
                                                selection=AssetSelection.keys("desfa_ng_quality_yearly"))
 desfa_ng_gcv_daily_job = define_asset_job("desfa_ng_gcv_daily_job",
@@ -36,6 +37,8 @@ desfa_flows_daily_job = define_asset_job("desfa_flows_daily_job",
                                          selection=AssetSelection.keys("desfa_flows_daily"))
 desfa_ng_pressure_monthly_job = define_asset_job("desfa_ng_pressure_monthly_job",
                                                  selection=AssetSelection.keys("desfa_ng_pressure_monthly"))
+desfa_estimated_vs_actual_offtakes_job = define_asset_job("desfa_estimated_vs_actual_offtakes_job",
+                                                          selection=AssetSelection.keys("desfa_estimated_vs_actual_offtakes"))
 
 ipto_job = define_asset_job("ipto_job", selection=AssetSelection.groups("ipto")
                                                   - AssetSelection.keys("ipto_daily_energy_balance")
@@ -91,6 +94,11 @@ desfa_ng_pressure_monthly_schedule = ScheduleDefinition(
     cron_schedule="0 2 * * *",
 )
 
+desfa_estimated_vs_actual_offtakes_schedule = ScheduleDefinition(
+    job=desfa_estimated_vs_actual_offtakes_job,
+    cron_schedule="0 2 * * *",
+)
+
 ipto_schedule = ScheduleDefinition(
     job=ipto_job,
     cron_schedule="0 3 * * *",
@@ -123,6 +131,7 @@ defs = Definitions(
     },
     schedules=[entsog_schedule, entsoe_hydro_schedule, entsoe_schedule, desfa_schedule,
                desfa_ng_quality_yearly_schedule, desfa_ng_gcv_daily_schedule, desfa_flows_daily_schedule,
-               desfa_ng_pressure_monthly_schedule, ipto_schedule, ipto_daily_energy_balance_schedule,
-               ipto_net_interconnection_flows_schedule, ipto_res_injections_schedule, ipto_unit_production_schedule]
+               desfa_ng_pressure_monthly_schedule, desfa_estimated_vs_actual_offtakes_schedule, ipto_schedule,
+               ipto_daily_energy_balance_schedule, ipto_net_interconnection_flows_schedule,
+               ipto_res_injections_schedule, ipto_unit_production_schedule]
 )

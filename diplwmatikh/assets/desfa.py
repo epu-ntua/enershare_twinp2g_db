@@ -393,3 +393,39 @@ def desfa_nominations_daily(context: AssetExecutionContext):
     dataframe.index.rename(name='timestamp', inplace=True)
     dataframe.columns = ['actual_load']
     return Output(value=dataframe)
+
+@asset(
+    partitions_def=StaticPartitionsDefinition(["desfa_estimated_vs_actual_offtakes_monopartition"]),
+    io_manager_key="postgres_io_manager",
+    group_name="desfa",
+    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"},
+    description="TSO's Estimations of N.G. Off-takes compared to Actual Off-takes"
+)
+def desfa_estimated_vs_actual_offtakes(context: AssetExecutionContext):
+    context.log.info(f"Handling single partition.")
+
+    url = 'https://www.desfa.gr/userfiles/pdflist/DDRA/Off_Takes_Estimation.xlsx'
+
+    # Fetch the content of the .xls file
+    response = requests.get(url)
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Use BytesIO to create a file-like object from the content
+        file_content = BytesIO(response.content)
+        df = pd.read_excel(file_content, sheet_name=0)
+
+        assert df.iloc[0, 0:3].to_list() == ['Ημερομηνία\nDate', ' TSO Estimation', 'Physical off-takes'], (
+            "Unrecognized format")
+
+        # keep only the first three columns
+        df.drop(df.columns[3:], axis=1, inplace=True)
+
+        # drop first row
+        df.drop(df.index[0], axis=0, inplace=True)
+
+        df.columns = ['timestamp', 'estimated', 'actual']
+        df.set_index(['timestamp'], inplace=True)
+
+        return Output(value=df)
+    else:
+        raise Exception(f"Failed to fetch the file, status code: {response.status_code}")

@@ -250,6 +250,12 @@ CREATE TABLE desfa_nominations_daily (
     point_type TEXT
 );
 
+CREATE TABLE desfa_estimated_vs_actual_offtakes (
+    timestamp TIMESTAMP PRIMARY KEY,
+    estimated NUMERIC,
+    actual NUMERIC
+);
+
 -- for postgrest, taken from https://postgrest.org/en/stable/tutorials/tut0.html#step-4-create-database-for-api
 CREATE ROLE web_anon NOLOGIN;
 GRANT USAGE ON SCHEMA data TO web_anon;
