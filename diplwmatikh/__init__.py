@@ -34,6 +34,9 @@ desfa_job = define_asset_job("desfa_job",
 desfa_nominations_job = define_asset_job("desfa_nominations_job",
                                          selection=AssetSelection.keys("desfa_nominations_daily"))
 
+desfa_flows_hourly_archive_job = define_asset_job("desfa_flows_hourly_archive_job",
+                                                  selection=AssetSelection.keys("desfa_flows_hourly_archive"))
+
 desfa_ng_quality_yearly_job = define_asset_job("desfa_ng_quality_yearly_job",
                                                selection=AssetSelection.keys("desfa_ng_quality_yearly"))
 desfa_ng_gcv_daily_job = define_asset_job("desfa_ng_gcv_daily_job",

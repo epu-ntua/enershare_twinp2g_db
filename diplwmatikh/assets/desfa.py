@@ -1,6 +1,7 @@
 import pathlib
 from functools import reduce
 from io import BytesIO
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import numpy as np
@@ -30,6 +31,10 @@ from dagster import (
 )
 
 entry_points = ["AGIA TRIADA", "SIDIROKASTRO", "KIPI", "NEA MESIMVRIA"]
+
+# Different .xlsx files have different names for the same points... rename according to latest .xlsx
+rename_dict = {'AGIOI THEODOROI': 'AG. THEODOROI', 'MEGALOPOLIS (PPC)': 'MEGALOPOLI (PPC)', 'THRIASIO': 'THRIASSIO',
+               'ELPE HAR': 'ELPE-HAR', 'ELPE - HAR': 'ELPE-HAR', 'MEGALOPOLIS\n(PPC)': 'MEGALOPOLI (PPC)'}
 
 # DESFA assets
 
@@ -107,23 +112,122 @@ def desfa_flows_daily(context: AssetExecutionContext):
 
 
 @asset(
-    partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
+    partitions_def=MonthlyPartitionsDefinition(start_date="2014-09-01", end_date="2018-08-01"),
     io_manager_key="postgres_io_manager",
     group_name="desfa",
     op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"},
     description="Deliveries / Off-takes (imports for entry points/off-takes per exit points) per hour since 2008"
 )
-def desfa_flows_hourly(context: AssetExecutionContext):
+def desfa_flows_hourly_archive(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
     context.log.info(f"Handling partition from {start} to {end}")
 
-    entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
-    country_code = 'GR'
+    start = start.replace(tzinfo=None)
+    end = end.replace(tzinfo=None)
 
-    dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
-    dataframe.index.rename(name='timestamp', inplace=True)
-    dataframe.columns = ['actual_load']
-    return Output(value=dataframe)
+    month = start.strftime("%m")
+    filepath = (pathlib.Path(__file__).parent / "archives_desfa" / "Hourly Flows" / f"Flows_{start.year}-Hourly" /
+                f"Hourly-Flows-{month}_{start.year}.xls")
+    if start > datetime.datetime(2016, 11, 30):  #.xlsx
+        filepath = filepath.with_suffix(filepath.suffix + "x")
+    context.log.info(f"Handling file {filepath}")
+    dfs = pd.DataFrame()
+    xls = pd.ExcelFile(filepath)
+    for sheet_name in xls.sheet_names:
+        df = pd.read_excel(xls, sheet_name=sheet_name)
+        day = datetime.datetime.strptime(sheet_name, "%d.%m.%Y")
+
+        # dst has values "nodst", "todst" (march transitory day), "dst", "fromdst" (october transitory day)
+        # needed in order to parse transitory days correctly and apply offset when dst
+        day_check = day + datetime.timedelta(1)  # Day to be checked is the next day, due to the formatting of the xlss
+        dst_value = day_check.replace(tzinfo=ZoneInfo("Europe/Athens")).dst()
+        dst_calc = dst_value - (day_check.replace(tzinfo=ZoneInfo("Europe/Athens")) + datetime.timedelta(1)).dst()
+
+        dst: str
+        if dst_value == datetime.timedelta(hours=0):
+            if dst_calc == datetime.timedelta(hours=0):
+                dst = "nodst"
+            else:
+                dst = "todst"
+        else:
+            if dst_calc == datetime.timedelta(hours=0):
+                dst = "dst"
+            else:
+                dst = "fromdst"
+
+        df = df.drop(df.index[0:1])  # Remove first row (not needed for data)
+        df = df.drop(df.columns[5], axis=1)  # Remove 5th column starting from 0 (empty)
+        df = df.drop(df.columns[0], axis=1)  # Remove 0th column starting from 0 (empty)
+
+        # Drop nan columns, if applicable
+        columns_with_nan = df.columns[df.iloc[0].isna()]
+        df = df.drop(columns=columns_with_nan)
+
+        # Now we've dropped all the excess rows and columns.
+        # Time to transform the dataframe to make the first row (barring the first element) into an index
+        new_headers = df.iloc[0, 1:].tolist()
+
+        # Adding suffix "_exit" to the first 3 headers and "_entry" to the rest, since a point may be bidirectional
+        new_headers = [x + "_entry" for x in new_headers[:3]] + [x + "_exit" for x in new_headers[3:]]
+
+        # We will remove the suffixes later
+        def remove_suffix(point: str):
+            if point.endswith("_entry"):
+                return point[:-6]
+            else:
+                return point[:-5]
+
+        df.columns = ['timestamp'] + new_headers  # Keep 'timestamp' for the first column and update the rest
+        # Drop the first row
+        df = df.drop(df.index[0])
+        # Reset index if necessary
+        df.reset_index(drop=True, inplace=True)
+
+        lastrow = ((df['timestamp'] == 'Total') | (df['timestamp'] == 'Σύνολο')).idxmax()
+        df = df.loc[:lastrow - 1]
+
+        if dst == "todst":
+            df = df.drop(df.index[18])  # empty row when transitioning to dst
+
+        starting_hour = 9 if dst == "nodst" or dst == "todst" else 8
+        iterations = 24
+        if dst == "todst":
+            iterations = 23
+        elif dst == "fromdst":
+            iterations = 25
+
+        df['timestamp'] = [day + datetime.timedelta(hours=i) for i in range(starting_hour, iterations + starting_hour)]
+
+        # Melt the DataFrame to go from wide to long format
+        df_long = pd.melt(df, id_vars=['timestamp'], var_name='point_id', value_name='value')
+        # Set the new index using the 'timestamp' and 'point_id' columns to create a MultiIndex
+        df_long.set_index(['timestamp', 'point_id'], inplace=True)
+
+        # Now, to add "entry"/"exit" labels to our points
+        def label_point_as_entry_or_exit(point: str):
+            if point.endswith("_entry"):
+                return "entry"
+            else:
+                return "exit"
+
+        # Apply this function to the 'point_id' index level
+        processed_header = df_long.index.get_level_values('point_id').map(label_point_as_entry_or_exit)
+        # Add the processed values as a new level to the index
+        df_long['point_type'] = processed_header
+        # Then set this new column as an additional level of the index
+        df_long.set_index('point_type', append=True, inplace=True)
+
+        # Applying reverse transformation to the 'point_id' index, i.e. removing suffix
+        df_long.reset_index(drop=False, inplace=True)
+        df_long['point_id'] = df_long['point_id'].apply(remove_suffix)
+
+        df_long.set_index(['timestamp', 'point_id', 'point_type'], inplace=True)
+
+        # Rename columns for compatibility with later .xlsx files
+        df_renamed = df_long.rename(index=rename_dict, level='point_id')
+
+        dfs = pd.concat([dfs, df_renamed])
+    return Output(value=dfs)
 
 
 @asset(
@@ -386,10 +490,6 @@ def desfa_nominations_daily(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
     context.log.info(f"Handling partition from {start} to {end}")
 
-    # Different .xlsx files have different names for the same points... rename according to latest .xlsx
-    rename_dict = {'AGIOI THEODOROI': 'AG. THEODOROI', 'MEGALOPOLIS (PPC)': 'MEGALOPOLI (PPC)', 'THRIASIO': 'THRIASSIO',
-                   'ELPE HAR': 'ELPE-HAR'}
-
     filepath_archived_1 = pathlib.Path(__file__).parent / 'archives_desfa' / 'Nominations' / '2011-2017_Nominations.xlsx'
     filepath_archived_2 = pathlib.Path(__file__).parent / 'archives_desfa' / 'Nominations' / 'Nominations_01_06_2017-31_12_2022.xlsx'
     url = 'https://www.desfa.gr/userfiles/pdflist/DERY/TS/Nominations-Allocations/Nominations%20(from%2001.01.2023).xlsx'
@@ -455,7 +555,7 @@ def desfa_nominations_daily(context: AssetExecutionContext):
         df_long.set_index(['timestamp', 'point_id', 'point_type'], inplace=True)
 
         filtered_df = df_long[(df_long.index.get_level_values('timestamp') >= start) & (
-                df_long.index.get_level_values('timestamp') <= end)]
+                df_long.index.get_level_values('timestamp') <= (end + datetime.timedelta(days=1)))]
 
         # Rename columns for compatibility with later .xlsx files
         filtered_df_renamed = filtered_df.rename(index=rename_dict, level='point_id')
@@ -513,7 +613,7 @@ def desfa_nominations_daily(context: AssetExecutionContext):
         df_long.set_index(['timestamp', 'point_id', 'point_type'], inplace=True)
 
         filtered_df = df_long[(df_long.index.get_level_values('timestamp') >= start) & (
-                df_long.index.get_level_values('timestamp') <= end)]
+                df_long.index.get_level_values('timestamp') <= (end + datetime.timedelta(days=1)))]
 
         return Output(value=filtered_df)
 
@@ -575,7 +675,7 @@ def desfa_nominations_daily(context: AssetExecutionContext):
             df_long.set_index(['timestamp', 'point_id', 'point_type'], inplace=True)
 
             filtered_df = df_long[(df_long.index.get_level_values('timestamp') >= start) & (
-                    df_long.index.get_level_values('timestamp') <= end)]
+                    df_long.index.get_level_values('timestamp') <= (end + datetime.timedelta(days=1)))]
             return Output(value=filtered_df)
 
         else:
