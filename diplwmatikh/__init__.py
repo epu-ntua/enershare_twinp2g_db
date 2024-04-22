@@ -28,7 +28,12 @@ desfa_job = define_asset_job("desfa_job",
                                        - AssetSelection.keys("desfa_ng_gcv_daily")
                                        - AssetSelection.keys("desfa_flows_daily")
                                        - AssetSelection.keys("desfa_ng_pressure_monthly")
-                                       - AssetSelection.keys("desfa_estimated_vs_actual_offtakes"))
+                                       - AssetSelection.keys("desfa_estimated_vs_actual_offtakes")
+                                       - AssetSelection.keys("desfa_nominations_daily"))
+
+desfa_nominations_job = define_asset_job("desfa_nominations_job",
+                                         selection=AssetSelection.keys("desfa_nominations_daily"))
+
 desfa_ng_quality_yearly_job = define_asset_job("desfa_ng_quality_yearly_job",
                                                selection=AssetSelection.keys("desfa_ng_quality_yearly"))
 desfa_ng_gcv_daily_job = define_asset_job("desfa_ng_gcv_daily_job",
@@ -72,6 +77,11 @@ entsog_schedule = ScheduleDefinition(
 desfa_schedule = ScheduleDefinition(
     job=desfa_job,
     cron_schedule="0 2 * * *",
+)
+
+desfa_nominations_schedule = ScheduleDefinition(
+    job=desfa_nominations_job,
+    cron_schedule="0 2 * * *"
 )
 
 desfa_ng_quality_yearly_schedule = ScheduleDefinition(
@@ -129,7 +139,7 @@ defs = Definitions(
     resources={
         "postgres_io_manager": PostgresIOManager(**PG_IOMANAGER_CONFIG)
     },
-    schedules=[entsog_schedule, entsoe_hydro_schedule, entsoe_schedule, desfa_schedule,
+    schedules=[entsog_schedule, entsoe_hydro_schedule, entsoe_schedule, desfa_schedule, desfa_nominations_schedule,
                desfa_ng_quality_yearly_schedule, desfa_ng_gcv_daily_schedule, desfa_flows_daily_schedule,
                desfa_ng_pressure_monthly_schedule, desfa_estimated_vs_actual_offtakes_schedule, ipto_schedule,
                ipto_daily_energy_balance_schedule, ipto_net_interconnection_flows_schedule,

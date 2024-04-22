@@ -199,11 +199,20 @@ CREATE TABLE desfa_flows_daily (
     PRIMARY KEY (timestamp, point_id, point_type)
 );
 
-CREATE TABLE desfa_flows_hourly (
-    timestamp TIMESTAMP PRIMARY KEY,
+CREATE TABLE desfa_flows_hourly_archive (
+    timestamp TIMESTAMP,
     value NUMERIC,
     point_id TEXT,
-    point_type TEXT
+    point_type TEXT,
+    PRIMARY KEY (timestamp, point_id, point_type)
+);
+
+CREATE TABLE desfa_flows_6h (
+    timestamp TIMESTAMP,
+    value NUMERIC,
+    point_id TEXT,
+    point_type TEXT,
+    PRIMARY KEY (timestamp, point_id, point_type)
 );
 
 CREATE TABLE desfa_ng_quality_yearly (
@@ -244,10 +253,11 @@ CREATE TABLE desfa_ng_gcv_daily (
 );
 
 CREATE TABLE desfa_nominations_daily (
-    timestamp TIMESTAMP PRIMARY KEY,
+    timestamp TIMESTAMP,
     value NUMERIC,
     point_id TEXT,
-    point_type TEXT
+    point_type TEXT,
+    PRIMARY KEY (timestamp, point_id, point_type)
 );
 
 CREATE TABLE desfa_estimated_vs_actual_offtakes (

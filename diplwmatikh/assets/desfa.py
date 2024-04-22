@@ -1,3 +1,4 @@
+import pathlib
 from functools import reduce
 from io import BytesIO
 
@@ -326,7 +327,6 @@ def desfa_ng_gcv_daily(context: AssetExecutionContext):
         new_headers = df.iloc[0, 1:].tolist()
         # Adding suffix "_exit" to the first 4 headers and "_entry" to the rest, since a point may be bidirectional
         new_headers = [x + "_entry" for x in new_headers[:4]] + [x + "_exit" for x in new_headers[4:]]
-        print(new_headers)
 
         # We will remove the suffixes later
         def remove_suffix(point: str):
@@ -376,7 +376,7 @@ def desfa_ng_gcv_daily(context: AssetExecutionContext):
 
 
 @asset(
-    partitions_def=MonthlyPartitionsDefinition(start_date="2014-11-30"),
+    partitions_def=MonthlyPartitionsDefinition(start_date="2011-11-01"),
     io_manager_key="postgres_io_manager",
     group_name="desfa",
     op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"},
@@ -386,13 +386,200 @@ def desfa_nominations_daily(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
     context.log.info(f"Handling partition from {start} to {end}")
 
-    entsoe_client = EntsoePandasClient(api_key=EnvVar("ENTSOE_API_KEY").get_value())
-    country_code = 'GR'
+    # Different .xlsx files have different names for the same points... rename according to latest .xlsx
+    rename_dict = {'AGIOI THEODOROI': 'AG. THEODOROI', 'MEGALOPOLIS (PPC)': 'MEGALOPOLI (PPC)', 'THRIASIO': 'THRIASSIO',
+                   'ELPE HAR': 'ELPE-HAR'}
 
-    dataframe: pd.DataFrame = entsoe_client.query_load(country_code, start=start, end=end)
-    dataframe.index.rename(name='timestamp', inplace=True)
-    dataframe.columns = ['actual_load']
-    return Output(value=dataframe)
+    filepath_archived_1 = pathlib.Path(__file__).parent / 'archives_desfa' / 'Nominations' / '2011-2017_Nominations.xlsx'
+    filepath_archived_2 = pathlib.Path(__file__).parent / 'archives_desfa' / 'Nominations' / 'Nominations_01_06_2017-31_12_2022.xlsx'
+    url = 'https://www.desfa.gr/userfiles/pdflist/DERY/TS/Nominations-Allocations/Nominations%20(from%2001.01.2023).xlsx'
+
+    start = start.replace(tzinfo=None)
+    end = end.replace(tzinfo=None)
+
+    if end < datetime.datetime(2017, 6, 1):
+        df = pd.read_excel(filepath_archived_1, engine='openpyxl')
+
+        df = df.drop(df.index[0:2])  # Remove first 2 rows (not needed for data)
+
+        indices_to_drop = [0, 5, 49, 50, 51]  # Remove empty columns
+        # Calculate indices to keep
+        indices_to_keep = [i for i in range(df.shape[1]) if i not in indices_to_drop]
+        df = df.iloc[:, indices_to_keep]
+
+        # Now we've dropped all the excess rows and columns.
+        # Time to transform the dataframe to make the first row (barring the first element) into an index
+        new_headers = df.iloc[0, 1:].tolist()
+
+        # Adding suffix "_exit" to the first 3 headers and "_entry" to the rest, since a point may be bidirectional
+        new_headers = [x + "_entry" for x in new_headers[:3]] + [x + "_exit" for x in new_headers[3:]]
+
+        # We will remove the suffixes later
+        def remove_suffix(point: str):
+            if point.endswith("_entry"):
+                return point[:-6]
+            else:
+                return point[:-5]
+
+        df.columns = ['timestamp'] + new_headers  # Keep 'timestamp' for the first column and update the rest
+        # Drop the first row
+        df = df.drop(df.index[0])
+        # Reset index if necessary
+        df.reset_index(drop=True, inplace=True)
+
+        df['timestamp'] = pd.to_datetime(df['timestamp']).map(lambda x: x.tz_localize(None))
+
+        # Melt the DataFrame to go from wide to long format
+        df_long = pd.melt(df, id_vars=['timestamp'], var_name='point_id', value_name='value')
+        # Set the new index using the 'timestamp' and 'point_id' columns to create a MultiIndex
+        df_long.set_index(['timestamp', 'point_id'], inplace=True)
+
+        # Now, to add "entry"/"exit" labels to our points
+        def label_point_as_entry_or_exit(point: str):
+            if point.endswith("_entry"):
+                return "entry"
+            else:
+                return "exit"
+
+        # Apply this function to the 'point_id' index level
+        processed_header = df_long.index.get_level_values('point_id').map(label_point_as_entry_or_exit)
+        # Add the processed values as a new level to the index
+        df_long['point_type'] = processed_header
+        # Then set this new column as an additional level of the index
+        df_long.set_index('point_type', append=True, inplace=True)
+
+        # Applying reverse transformation to the 'point_id' index, i.e. removing suffix
+        df_long.reset_index(drop=False, inplace=True)
+        df_long['point_id'] = df_long['point_id'].apply(remove_suffix)
+
+        df_long.set_index(['timestamp', 'point_id', 'point_type'], inplace=True)
+
+        filtered_df = df_long[(df_long.index.get_level_values('timestamp') >= start) & (
+                df_long.index.get_level_values('timestamp') <= end)]
+
+        # Rename columns for compatibility with later .xlsx files
+        filtered_df_renamed = filtered_df.rename(index=rename_dict, level='point_id')
+        return Output(value=filtered_df_renamed)
+
+    elif end < datetime.datetime(2023, 1, 1):
+        df = pd.read_excel(filepath_archived_2, engine='openpyxl')
+
+        df = df.drop(df.index[0:1])  # Remove first row (not needed for data)
+
+        # Time to transform the dataframe to make the first row (barring the first element) into an index
+        new_headers = df.iloc[0, 1:].tolist()
+
+        # Adding suffix "_exit" to the first 4 headers and "_entry" to the rest, since a point may be bidirectional
+        new_headers = [x + "_entry" for x in new_headers[:4]] + [x + "_exit" for x in new_headers[4:]]
+
+        # We will remove the suffixes later
+        def remove_suffix(point: str):
+            if point.endswith("_entry"):
+                return point[:-6]
+            else:
+                return point[:-5]
+
+        df.columns = ['timestamp'] + new_headers  # Keep 'timestamp' for the first column and update the rest
+        # Drop the first row
+        df = df.drop(df.index[0])
+        # Reset index if necessary
+        df.reset_index(drop=True, inplace=True)
+
+        df['timestamp'] = pd.to_datetime(df['timestamp']).map(lambda x: x.tz_localize(None))
+
+        # Melt the DataFrame to go from wide to long format
+        df_long = pd.melt(df, id_vars=['timestamp'], var_name='point_id', value_name='value')
+        # Set the new index using the 'timestamp' and 'point_id' columns to create a MultiIndex
+        df_long.set_index(['timestamp', 'point_id'], inplace=True)
+
+        # Now, to add "entry"/"exit" labels to our points
+        def label_point_as_entry_or_exit(point: str):
+            if point.endswith("_entry"):
+                return "entry"
+            else:
+                return "exit"
+
+        # Apply this function to the 'point_id' index level
+        processed_header = df_long.index.get_level_values('point_id').map(label_point_as_entry_or_exit)
+        # Add the processed values as a new level to the index
+        df_long['point_type'] = processed_header
+        # Then set this new column as an additional level of the index
+        df_long.set_index('point_type', append=True, inplace=True)
+
+        # Applying reverse transformation to the 'point_id' index, i.e. removing suffix
+        df_long.reset_index(drop=False, inplace=True)
+        df_long['point_id'] = df_long['point_id'].apply(remove_suffix)
+
+        df_long.set_index(['timestamp', 'point_id', 'point_type'], inplace=True)
+
+        filtered_df = df_long[(df_long.index.get_level_values('timestamp') >= start) & (
+                df_long.index.get_level_values('timestamp') <= end)]
+
+        return Output(value=filtered_df)
+
+    else:
+        # Fetch the content of the .xls file
+        response = requests.get(url)
+        # Check if the request was successful
+        if response.status_code == 200:
+            # Use BytesIO to create a file-like object from the content
+            file_content = BytesIO(response.content)
+            df = pd.read_excel(file_content, sheet_name=0)
+
+            df = df.drop(df.index[0:1])  # Remove first row (not needed for data)
+
+            # Time to transform the dataframe to make the first row (barring the first element) into an index
+            new_headers = df.iloc[0, 1:].tolist()
+
+            # Adding suffix "_exit" to the first 5 headers and "_entry" to the rest, since a point may be bidirectional
+            new_headers = [x + "_entry" for x in new_headers[:5]] + [x + "_exit" for x in new_headers[5:]]
+
+            # We will remove the suffixes later
+            def remove_suffix(point: str):
+                if point.endswith("_entry"):
+                    return point[:-6]
+                else:
+                    return point[:-5]
+
+            df.columns = ['timestamp'] + new_headers  # Keep 'timestamp' for the first column and update the rest
+            # Drop the first row
+            df = df.drop(df.index[0])
+            # Reset index if necessary
+            df.reset_index(drop=True, inplace=True)
+
+            df['timestamp'] = pd.to_datetime(df['timestamp']).map(lambda x: x.tz_localize(None))
+
+            # Melt the DataFrame to go from wide to long format
+            df_long = pd.melt(df, id_vars=['timestamp'], var_name='point_id', value_name='value')
+            # Set the new index using the 'timestamp' and 'point_id' columns to create a MultiIndex
+            df_long.set_index(['timestamp', 'point_id'], inplace=True)
+
+            # Now, to add "entry"/"exit" labels to our points
+            def label_point_as_entry_or_exit(point: str):
+                if point.endswith("_entry"):
+                    return "entry"
+                else:
+                    return "exit"
+
+            # Apply this function to the 'point_id' index level
+            processed_header = df_long.index.get_level_values('point_id').map(label_point_as_entry_or_exit)
+            # Add the processed values as a new level to the index
+            df_long['point_type'] = processed_header
+            # Then set this new column as an additional level of the index
+            df_long.set_index('point_type', append=True, inplace=True)
+
+            # Applying reverse transformation to the 'point_id' index, i.e. removing suffix
+            df_long.reset_index(drop=False, inplace=True)
+            df_long['point_id'] = df_long['point_id'].apply(remove_suffix)
+
+            df_long.set_index(['timestamp', 'point_id', 'point_type'], inplace=True)
+
+            filtered_df = df_long[(df_long.index.get_level_values('timestamp') >= start) & (
+                    df_long.index.get_level_values('timestamp') <= end)]
+            return Output(value=filtered_df)
+
+        else:
+            raise Exception(f"Failed to fetch the file, status code: {response.status_code}")
 
 @asset(
     partitions_def=StaticPartitionsDefinition(["desfa_estimated_vs_actual_offtakes_monopartition"]),
