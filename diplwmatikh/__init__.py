@@ -29,13 +29,18 @@ desfa_job = define_asset_job("desfa_job",
                                        - AssetSelection.keys("desfa_flows_daily")
                                        - AssetSelection.keys("desfa_ng_pressure_monthly")
                                        - AssetSelection.keys("desfa_estimated_vs_actual_offtakes")
-                                       - AssetSelection.keys("desfa_nominations_daily"))
+                                       - AssetSelection.keys("desfa_nominations_daily")
+                                       - AssetSelection.keys("desfa_flows_hourly_archive")
+                                       - AssetSelection.keys("desfa_flows_6h"))
 
 desfa_nominations_job = define_asset_job("desfa_nominations_job",
                                          selection=AssetSelection.keys("desfa_nominations_daily"))
 
 desfa_flows_hourly_archive_job = define_asset_job("desfa_flows_hourly_archive_job",
                                                   selection=AssetSelection.keys("desfa_flows_hourly_archive"))
+
+desfa_flows_6h_job = define_asset_job("desfa_flows_6h_job",
+                                      selection=AssetSelection.keys("desfa_flows_6h"))
 
 desfa_ng_quality_yearly_job = define_asset_job("desfa_ng_quality_yearly_job",
                                                selection=AssetSelection.keys("desfa_ng_quality_yearly"))
@@ -79,6 +84,11 @@ entsog_schedule = ScheduleDefinition(
 
 desfa_schedule = ScheduleDefinition(
     job=desfa_job,
+    cron_schedule="0 2 * * *",
+)
+
+desfa_flows_6h_schedule = ScheduleDefinition(
+    job=desfa_flows_6h_job,
     cron_schedule="0 2 * * *",
 )
 
@@ -146,5 +156,5 @@ defs = Definitions(
                desfa_ng_quality_yearly_schedule, desfa_ng_gcv_daily_schedule, desfa_flows_daily_schedule,
                desfa_ng_pressure_monthly_schedule, desfa_estimated_vs_actual_offtakes_schedule, ipto_schedule,
                ipto_daily_energy_balance_schedule, ipto_net_interconnection_flows_schedule,
-               ipto_res_injections_schedule, ipto_unit_production_schedule]
+               ipto_res_injections_schedule, ipto_unit_production_schedule, desfa_flows_6h_schedule]
 )

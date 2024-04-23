@@ -116,14 +116,13 @@ def desfa_flows_daily(context: AssetExecutionContext):
     io_manager_key="postgres_io_manager",
     group_name="desfa",
     op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"},
-    description="Deliveries / Off-takes (imports for entry points/off-takes per exit points) per hour since 2008"
+    description="Deliveries / Off-takes (imports for entry points/off-takes per exit points) per hour for 2014-2018"
 )
 def desfa_flows_hourly_archive(context: AssetExecutionContext):
     start, end = timewindow_to_ts(context.partition_time_window)
     context.log.info(f"Handling partition from {start} to {end}")
 
     start = start.replace(tzinfo=None)
-    end = end.replace(tzinfo=None)
 
     month = start.strftime("%m")
     filepath = (pathlib.Path(__file__).parent / "archives_desfa" / "Hourly Flows" / f"Flows_{start.year}-Hourly" /
@@ -227,6 +226,129 @@ def desfa_flows_hourly_archive(context: AssetExecutionContext):
         df_renamed = df_long.rename(index=rename_dict, level='point_id')
 
         dfs = pd.concat([dfs, df_renamed])
+    return Output(value=dfs)
+
+@asset(
+    partitions_def=MonthlyPartitionsDefinition(start_date="2022-08-01"),
+    io_manager_key="postgres_io_manager",
+    group_name="desfa",
+    op_tags={"dagster/concurrency_key": "desfa", "concurrency_tag": "desfa"},
+    description="Deliveries / Off-takes (imports for entry points/off-takes per exit points) per 6 hours since 2022"
+)
+def desfa_flows_6h(context: AssetExecutionContext):
+    start, end = timewindow_to_ts(context.partition_time_window)
+    context.log.info(f"Handling partition from {start} to {end}")
+
+    start = start.replace(tzinfo=None)
+    end = end.replace(tzinfo=None)
+    url = "https://www.desfa.gr/userfiles/pdflist/DDRA/Hourly_Flows_since_01_01_2024.xlsx"
+
+    if start < datetime.datetime(2023, 1, 1):
+        filepath = pathlib.Path(__file__).parent /'archives_desfa'/'Hourly Flows'/'Flows_2022-Hourly'/'Hourly_Flows_17_08_2022-31_12_2022.xlsx'
+    elif start < datetime.datetime(2024, 1, 1):
+        filepath = pathlib.Path(__file__).parent /'archives_desfa'/'Hourly Flows'/'Flows_2023-Hourly'/'Hourly_Flows_since_01_01_2023.xlsx'
+    else:
+        response = requests.get(url)
+        if response.status_code == 200:
+            filepath = BytesIO(response.content)
+        else:
+            raise Exception(f"Failed to fetch the file, status code: {response.status_code}")
+    xls = pd.ExcelFile(filepath)
+
+    dfs = pd.DataFrame()
+
+    for sheet_name in xls.sheet_names:
+        df = pd.read_excel(xls, sheet_name=sheet_name)
+
+        # Dumb sheet name formatting mistakes/edge cases... ignore.
+        if sheet_name == '23.01.204':
+            sheet_name = '23.01.2024'
+        if sheet_name == '29.02.2024.':
+            sheet_name = '29.02.2024'
+
+        day = datetime.datetime.strptime(sheet_name.strip(), "%d.%m.%Y")
+
+        df = df.drop(df.index[0])  # Remove first row (not needed for data)
+        df = df.drop(df.index[5])  # Remove fifth row (not needed for data)
+
+        df = df.drop(df.columns[6], axis=1)  # Remove 5th column starting from 0 (empty)
+        # Drop all rows after "Daily Quantities:"
+        first_column = df.columns[0]
+        lastrow = (df[first_column] == 'Daily Quantities:').idxmax()
+        df = df.loc[:lastrow]
+
+        df = df.drop(df.columns[0], axis=1)  # Remove 1st column starting from 0 (empty)
+
+        # Drop nan columns, if applicable
+        columns_with_nan = df.columns[df.iloc[0].isna()]
+        df = df.drop(columns=columns_with_nan)
+
+        # Now we've dropped all the excess rows and columns.
+        # Time to transform the dataframe to make the first row (barring the first element) into an index
+        new_headers = df.iloc[0, 1:].tolist()
+
+        # Adding suffix "_exit" to the first 3 headers and "_entry" to the rest, since a point may be bidirectional
+        new_headers = [x + "_entry" for x in new_headers[:4]] + [x + "_exit" for x in new_headers[4:]]
+
+        # We will remove the suffixes later
+        def remove_suffix(point: str):
+            if point.endswith("_entry"):
+                return point[:-6]
+            else:
+                return point[:-5]
+
+        df.columns = ['timestamp'] + new_headers  # Keep 'timestamp' for the first column and update the rest
+        # Drop the first row
+        df = df.drop(df.index[0])
+        # Reset index if necessary
+        df.reset_index(drop=True, inplace=True)
+
+        df['timestamp'] = [day + datetime.timedelta(hours=7), day + datetime.timedelta(hours=13),
+                           day + datetime.timedelta(hours=18), day + datetime.timedelta(hours=21),
+                           day + datetime.timedelta(hours=25)]
+
+        # Each value is aggregated on the previous one, therefore we need to calculate the net value per time window
+        df_no_timestamps = df.drop(df.columns[0], axis=1)
+        diffed_df = df_no_timestamps.diff()
+        diffed_df.iloc[0] = df_no_timestamps.iloc[0]
+        df = pd.concat([df[['timestamp']], diffed_df], axis=1)
+
+        # Melt the DataFrame to go from wide to long format
+        df_long = pd.melt(df, id_vars=['timestamp'], var_name='point_id', value_name='value')
+        # Set the new index using the 'timestamp' and 'point_id' columns to create a MultiIndex
+        df_long.set_index(['timestamp', 'point_id'], inplace=True)
+
+        # Now, to add "entry"/"exit" labels to our points
+        def label_point_as_entry_or_exit(point: str):
+            if point.endswith("_entry"):
+                return "entry"
+            else:
+                return "exit"
+
+        # Apply this function to the 'point_id' index level
+        processed_header = df_long.index.get_level_values('point_id').map(label_point_as_entry_or_exit)
+        # Add the processed values as a new level to the index
+        df_long['point_type'] = processed_header
+        # Then set this new column as an additional level of the index
+        df_long.set_index('point_type', append=True, inplace=True)
+
+        # Applying reverse transformation to the 'point_id' index, i.e. removing suffix
+        df_long.reset_index(drop=False, inplace=True)
+        df_long['point_id'] = df_long['point_id'].apply(remove_suffix)
+
+        df_long.set_index(['timestamp', 'point_id', 'point_type'], inplace=True)
+
+        # Rename columns for compatibility with later .xlsx files
+        df_renamed = df_long.rename(index=rename_dict, level='point_id')
+
+        filtered_df = df_renamed[(df_renamed.index.get_level_values('timestamp') >= start) & (
+                df_renamed.index.get_level_values('timestamp') <= (end + datetime.timedelta(days=2)))]
+
+        # Large negative values cannot be attributed to rounding errors and are logically impossible
+        # Therefore we assume it's a data entry error and the data is wrong, replacing such values with NaN
+        filtered_df = filtered_df.where(filtered_df > -50, np.nan)
+
+        dfs = pd.concat([dfs, filtered_df])
     return Output(value=dfs)
 
 
